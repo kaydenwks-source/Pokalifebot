@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>MomentumAI</RootNamespace>
+  </PropertyGroup>
+
+  <!-- F# compiles files IN ORDER: a file can only use modules listed above it. -->
+  <ItemGroup>
+    <Compile Include="Bindings/Node.fs" />
+    <Compile Include="Utils/Logger.fs" />
+    <Compile Include="Config/Env.fs" />
+    <Compile Include="Bindings/Telegraf.fs" />
+    <Compile Include="Ai/DeepSeek.fs" />
+    <Compile Include="Commands/Basic.fs" />
+    <Compile Include="Bot.fs" />
+    <Compile Include="Index.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.*" />
+    <PackageReference Include="Fable.Promise" Version="3.*" />
+  </ItemGroup>
+
+</Project>

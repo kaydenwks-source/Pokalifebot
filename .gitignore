@@ -1,0 +1,21 @@
+# Secrets — never commit these
+.env
+
+# Build output
+dist/
+bin/
+obj/
+.fable/
+
+# Dependencies
+node_modules/
+
+# Runtime data
+logs/*.log
+database/*.json
+database/*.sqlite
+database/*.db
+
+# OS noise
+Thumbs.db
+.DS_Store
