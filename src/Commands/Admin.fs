@@ -23,7 +23,8 @@ let handle (config: Env.AppConfig) (ctx: Context) =
           sprintf "Version: v%s (%s)" Env.Version config.Environment
           sprintf "Uptime: %s" (Time.formatUptime (Node.nodeProcess.uptime ()))
           sprintf "Users: %d (daily quote on: %d)" users.Length dailyQuotesOn
-          sprintf "Sleep logs: %d" sleepLogCount ]
+          sprintf "Sleep logs: %d" sleepLogCount
+          sprintf "Reminders: %d" (Reminders.getAll () |> Array.length) ]
         |> String.concat "\n"
         |> ctx.reply
     | Some from, _ ->

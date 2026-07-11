@@ -45,7 +45,11 @@ let private helpText =
       "/sleep 23:30 07:00 — log last night's sleep"
       "/sleep today | history | stats — entries, trends and AI analysis"
       ""
-      "Coming soon: reminders, habit tracking and more." ]
+      "⏰ Reminders"
+      "/remind — plain English, e.g. /remind every monday 8am gym"
+      "/reminders — list them; /deletereminder <number> — remove one"
+      ""
+      "Coming soon: habit tracking, daily planner and more." ]
     |> String.concat "\n"
 
 let private startText name =
@@ -76,4 +80,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 3 (sleep tracker)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 4 (reminders)" Env.Version)

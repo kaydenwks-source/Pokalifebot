@@ -29,6 +29,11 @@ let create (config: Env.AppConfig) : Telegraf =
     bot.command ("sleep", Commands.Sleep.handle config)
     bot.command ("admin", Commands.Admin.handle config)
 
+    // Phase 4 — reminders (Telegram lowercases commands, so no camelCase)
+    bot.command ("remind", Commands.Reminders.handleRemind config)
+    bot.command ("reminders", Commands.Reminders.handleList)
+    bot.command ("deletereminder", Commands.Reminders.handleDelete)
+
     // Last-resort error handler: log the failure but keep the bot running.
     bot.catch (
         System.Func<_, _, _>(fun err ctx ->

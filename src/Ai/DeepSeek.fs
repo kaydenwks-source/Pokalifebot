@@ -17,22 +17,26 @@ type private FetchResponse =
 [<Global>]
 let private fetch (url: string) (options: obj) : JS.Promise<FetchResponse> = jsNative
 
-/// Send one system+user message pair to DeepSeek and get the reply text.
-let chat
+/// Shared request core. extraBody entries are appended last, so they
+/// override the defaults (later keys win inside createObj).
+let private complete
     (config: Env.AppConfig)
+    (extraBody: (string * obj) list)
     (systemPrompt: string)
     (userMessage: string)
     : JS.Promise<Result<string, string>> =
     promise {
         try
             let body =
-                createObj
+                createObj (
                     [ "model" ==> config.DeepSeekModel
                       "messages"
                       ==> [| createObj [ "role" ==> "system"; "content" ==> systemPrompt ]
                              createObj [ "role" ==> "user"; "content" ==> userMessage ] |]
                       "temperature" ==> 0.7
                       "max_tokens" ==> 1000 ]
+                    @ extraBody
+                )
 
             let options =
                 createObj
@@ -60,6 +64,20 @@ let chat
         with ex ->
             return Error("DeepSeek request failed: " + ex.Message)
     }
+
+/// Send one system+user message pair to DeepSeek and get the reply text.
+let chat (config: Env.AppConfig) (systemPrompt: string) (userMessage: string) =
+    complete config [] systemPrompt userMessage
+
+/// Same, but forces a strict JSON object reply (for parsers/extractors).
+/// Low temperature: parsing wants determinism, not creativity.
+let chatJson (config: Env.AppConfig) (systemPrompt: string) (userMessage: string) =
+    complete
+        config
+        [ "response_format" ==> createObj [ "type" ==> "json_object" ]
+          "temperature" ==> 0.2 ]
+        systemPrompt
+        userMessage
 
 /// Tiny request fired at startup so a bad API key or network problem
 /// shows up in the logs immediately, not on the user's first /quote.

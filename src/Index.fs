@@ -12,6 +12,7 @@ let private start (config: Env.AppConfig) =
 
         let bot = Bot.create config
         Scheduler.DailyQuotes.start config bot
+        Scheduler.Reminders.start bot
 
         // Graceful shutdown on Ctrl+C or a kill signal.
         Node.nodeProcess.once ("SIGINT", fun _ ->

@@ -15,18 +15,23 @@
     <Compile Include="Bindings/Telegraf.fs" />
     <Compile Include="Models/User.fs" />
     <Compile Include="Models/Sleep.fs" />
+    <Compile Include="Models/Reminder.fs" />
     <Compile Include="Services/Storage.fs" />
     <Compile Include="Services/Users.fs" />
     <Compile Include="Services/SleepLogs.fs" />
+    <Compile Include="Services/Reminders.fs" />
     <Compile Include="Ai/DeepSeek.fs" />
     <Compile Include="Ai/Quotes.fs" />
     <Compile Include="Ai/Sleep.fs" />
+    <Compile Include="Ai/ReminderParser.fs" />
     <Compile Include="Commands/Common.fs" />
     <Compile Include="Commands/Basic.fs" />
     <Compile Include="Commands/Quotes.fs" />
     <Compile Include="Commands/Sleep.fs" />
+    <Compile Include="Commands/Reminders.fs" />
     <Compile Include="Commands/Admin.fs" />
     <Compile Include="Scheduler/DailyQuotes.fs" />
+    <Compile Include="Scheduler/Reminders.fs" />
     <Compile Include="Bot.fs" />
     <Compile Include="Index.fs" />
   </ItemGroup>
