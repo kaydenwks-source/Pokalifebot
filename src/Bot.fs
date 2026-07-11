@@ -16,6 +16,15 @@ let create (config: Env.AppConfig) : Telegraf =
     bot.command ("ping", Commands.Basic.handlePing)
     bot.command ("version", Commands.Basic.handleVersion)
 
+    // Phase 2 — morning motivation
+    bot.command ("quote", Commands.Quotes.handleQuote config)
+    bot.command ("category", Commands.Quotes.handleCategory)
+    bot.command ("quotetime", Commands.Quotes.handleQuoteTime)
+
+    // One button action per category (callback_data "cat:Gym" etc.)
+    for category in Models.User.Categories.all do
+        bot.action ("cat:" + category, Commands.Quotes.handleCategoryChosen category)
+
     // Last-resort error handler: log the failure but keep the bot running.
     bot.catch (
         System.Func<_, _, _>(fun err ctx ->

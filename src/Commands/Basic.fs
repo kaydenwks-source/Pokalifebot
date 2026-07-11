@@ -36,7 +36,12 @@ let private helpText =
       "/ping — check that I'm alive"
       "/version — current bot version"
       ""
-      "Coming soon: daily quotes, habit tracking, sleep coaching and more." ]
+      "🌅 Motivation"
+      "/quote — get a motivational quote now (try: /quote gym)"
+      "/category — choose your preferred quote category"
+      "/quotetime — daily quote at your chosen time (e.g. /quotetime 07:00)"
+      ""
+      "Coming soon: habit tracking, sleep coaching and more." ]
     |> String.concat "\n"
 
 let private startText name =
@@ -71,4 +76,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 1 (project setup)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 2 (morning motivation)" Env.Version)

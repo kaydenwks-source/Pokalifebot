@@ -11,6 +11,7 @@ let private start (config: Env.AppConfig) =
         Logger.info (sprintf "Momentum AI v%s starting in %s mode" Env.Version config.Environment)
 
         let bot = Bot.create config
+        Scheduler.DailyQuotes.start config bot
 
         // Graceful shutdown on Ctrl+C or a kill signal.
         Node.nodeProcess.once ("SIGINT", fun _ ->

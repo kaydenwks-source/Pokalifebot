@@ -6,11 +6,13 @@ module Bindings.Node
 open Fable.Core
 open Fable.Core.JsInterop
 
-/// The subset of Node's "fs" module we need (file logging).
+/// The subset of Node's "fs" module we need (file logging + JSON storage).
 type IFs =
     abstract existsSync: path: string -> bool
     abstract mkdirSync: path: string * options: obj -> unit
     abstract appendFileSync: path: string * data: string -> unit
+    abstract readFileSync: path: string * encoding: string -> string
+    abstract writeFileSync: path: string * data: string -> unit
 
 [<ImportAll("node:fs")>]
 let fs: IFs = jsNative
