@@ -10,46 +10,14 @@ open Services
 open Utils
 open Config
 
-let private aiUnavailable =
-    "😓 I couldn't reach my AI brain just now. Please try again in a minute."
-
-/// Extract the argument from a command, e.g. "/quote gym" -> Some "gym".
-let private commandArg (ctx: Context) =
-    ctx.message
-    |> Option.bind (fun m -> m.text)
-    |> Option.bind (fun text ->
-        let parts =
-            text.Trim().Split(' ') |> Array.filter (fun p -> p.Trim() <> "")
-
-        if parts.Length >= 2 then
-            Some(String.concat " " (Array.skip 1 parts))
-        else
-            None)
-
-/// Register/refresh the user so a profile always exists before we act.
-let private ensureUser (ctx: Context) : UserProfile option =
-    match ctx.from, ctx.chat with
-    | Some from, Some chat -> Some(Users.upsert from.id chat.id from.first_name from.username)
-    | _ -> None
-
-/// "07:5" / "7:30" / "23:59" -> normalised "HH:mm", or None if invalid.
-let private parseTime (raw: string) : string option =
-    match raw.Trim().Split(':') with
-    | [| h; m |] ->
-        match System.Int32.TryParse h, System.Int32.TryParse m with
-        | (true, hh), (true, mm) when hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59 ->
-            Some(sprintf "%02d:%02d" hh mm)
-        | _ -> None
-    | _ -> None
-
 let handleQuote (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
     promise {
-        match ensureUser ctx with
+        match Common.ensureUser ctx with
         | None -> return! ctx.reply "Sorry, I couldn't identify you — please try again."
         | Some user ->
             // Category priority: explicit argument > stored preference.
             let category, hint =
-                match commandArg ctx with
+                match Common.commandArg ctx with
                 | Some arg ->
                     match Categories.tryFind arg with
                     | Some cat -> cat, None
@@ -78,7 +46,7 @@ let handleQuote (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
                         |> Option.defaultValue ""
 
                     sprintf "💪 %s\n\n%s%s" category quote extra
-                | Error _ -> aiUnavailable
+                | Error _ -> Common.aiUnavailable
 
             return! ctx.reply text
     }
@@ -98,7 +66,7 @@ let private categoryKeyboard =
 
 let handleCategory (ctx: Context) : JS.Promise<obj> =
     let current =
-        ensureUser ctx
+        Common.ensureUser ctx
         |> Option.map (fun u -> sprintf " (current: %s)" u.QuoteCategory)
         |> Option.defaultValue ""
 
@@ -124,10 +92,10 @@ let handleCategoryChosen (category: string) (ctx: Context) : JS.Promise<obj> =
     }
 
 let handleQuoteTime (ctx: Context) : JS.Promise<obj> =
-    match ensureUser ctx with
+    match Common.ensureUser ctx with
     | None -> ctx.reply "Sorry, I couldn't identify you — please try again."
     | Some user ->
-        match commandArg ctx with
+        match Common.commandArg ctx with
         | None ->
             let status =
                 user.QuoteTime
@@ -143,7 +111,7 @@ let handleQuoteTime (ctx: Context) : JS.Promise<obj> =
             Logger.info (sprintf "%s turned daily quote off" user.FirstName)
             ctx.reply "Daily quote turned off. Re-enable anytime with /quotetime HH:MM."
         | Some arg ->
-            match parseTime arg with
+            match Time.parseTime arg with
             | Some time ->
                 Users.setQuoteTime user.Id (Some time)
                 Logger.info (sprintf "%s set daily quote time to %s" user.FirstName time)

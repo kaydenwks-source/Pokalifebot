@@ -10,14 +10,15 @@ open Bindings
 importSideEffects "dotenv/config"
 
 [<Literal>]
-let Version = "0.2.0"
+let Version = "0.3.0"
 
 type AppConfig =
     { BotToken: string
       DeepSeekApiKey: string
       DeepSeekBaseUrl: string
       DeepSeekModel: string
-      Environment: string }
+      Environment: string
+      AdminUserId: float option }
 
 /// Validates required variables, collecting ALL missing names at once
 /// so the user can fix everything in a single pass.
@@ -42,5 +43,11 @@ let load () : Result<AppConfig, string list> =
                 |> Option.defaultValue "deepseek-chat"
               Environment =
                 Node.tryGetEnv "NODE_ENV"
-                |> Option.defaultValue "development" }
+                |> Option.defaultValue "development"
+              AdminUserId =
+                Node.tryGetEnv "ADMIN_USER_ID"
+                |> Option.bind (fun raw ->
+                    match System.Double.TryParse raw with
+                    | true, v -> Some v
+                    | _ -> None) }
     | _ -> Error missing

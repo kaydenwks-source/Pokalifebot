@@ -41,7 +41,11 @@ let private helpText =
       "/category — choose your preferred quote category"
       "/quotetime — daily quote at your chosen time (e.g. /quotetime 07:00)"
       ""
-      "Coming soon: habit tracking, sleep coaching and more." ]
+      "😴 Sleep"
+      "/sleep 23:30 07:00 — log last night's sleep"
+      "/sleep today | history | stats — entries, trends and AI analysis"
+      ""
+      "Coming soon: reminders, habit tracking and more." ]
     |> String.concat "\n"
 
 let private startText name =
@@ -55,10 +59,6 @@ let private startText name =
       "Type /help to see what I can do right now." ]
     |> String.concat "\n"
 
-let private formatUptime (totalSeconds: float) =
-    let s = int totalSeconds
-    sprintf "%dh %dm %ds" (s / 3600) ((s % 3600) / 60) (s % 60)
-
 let handleStart (ctx: Context) =
     logCommand "start" ctx
     ctx.reply (startText (displayName ctx))
@@ -71,9 +71,9 @@ let handlePing (ctx: Context) =
     logCommand "ping" ctx
 
     ctx.reply (
-        sprintf "🏓 Pong! I'm alive.\nUptime: %s" (formatUptime (Node.nodeProcess.uptime ()))
+        sprintf "🏓 Pong! I'm alive.\nUptime: %s" (Time.formatUptime (Node.nodeProcess.uptime ()))
     )
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 2 (morning motivation)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 3 (sleep tracker)" Env.Version)

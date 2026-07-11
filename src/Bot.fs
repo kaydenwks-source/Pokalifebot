@@ -25,6 +25,10 @@ let create (config: Env.AppConfig) : Telegraf =
     for category in Models.User.Categories.all do
         bot.action ("cat:" + category, Commands.Quotes.handleCategoryChosen category)
 
+    // Phase 3 — sleep tracker + admin panel
+    bot.command ("sleep", Commands.Sleep.handle config)
+    bot.command ("admin", Commands.Admin.handle config)
+
     // Last-resort error handler: log the failure but keep the bot running.
     bot.catch (
         System.Func<_, _, _>(fun err ctx ->
