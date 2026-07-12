@@ -10,7 +10,7 @@ open Bindings
 importSideEffects "dotenv/config"
 
 [<Literal>]
-let Version = "0.7.0"
+let Version = "0.7.1"
 
 type AppConfig =
     { BotToken: string
@@ -18,7 +18,11 @@ type AppConfig =
       DeepSeekBaseUrl: string
       DeepSeekModel: string
       Environment: string
-      AdminUserId: float option }
+      AdminUserId: float option
+      // Optional OpenAI-compatible vision provider (photo food logging).
+      VisionApiKey: string option
+      VisionBaseUrl: string
+      VisionModel: string }
 
 /// Validates required variables, collecting ALL missing names at once
 /// so the user can fix everything in a single pass.
@@ -49,5 +53,12 @@ let load () : Result<AppConfig, string list> =
                 |> Option.bind (fun raw ->
                     match System.Double.TryParse raw with
                     | true, v -> Some v
-                    | _ -> None) }
+                    | _ -> None)
+              VisionApiKey = Node.tryGetEnv "VISION_API_KEY"
+              VisionBaseUrl =
+                Node.tryGetEnv "VISION_BASE_URL"
+                |> Option.defaultValue "https://generativelanguage.googleapis.com/v1beta/openai"
+              VisionModel =
+                Node.tryGetEnv "VISION_MODEL"
+                |> Option.defaultValue "gemini-2.0-flash" }
     | _ -> Error missing

@@ -48,7 +48,7 @@ let create (config: Env.AppConfig) : Telegraf =
     // Phase 7 — calorie tracker
     bot.command ("food", Commands.Food.handleFood config)
     bot.command ("calories", Commands.Food.handleCalories)
-    bot.on (messageFilter "photo", Commands.Food.handlePhoto)
+    bot.on (messageFilter "photo", Commands.Food.handlePhoto config)
 
     // Last-resort error handler: log the failure but keep the bot running.
     bot.catch (

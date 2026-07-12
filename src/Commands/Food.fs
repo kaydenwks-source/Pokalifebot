@@ -3,6 +3,7 @@
 module Commands.Food
 
 open Fable.Core
+open Fable.Core.JsInterop
 open Bindings.Telegraf
 open Models.User
 open Models.Meal
@@ -145,14 +146,80 @@ let handleCalories (ctx: Context) : JS.Promise<obj> =
         | Some "month" -> showMonth user ctx
         | Some _ -> ctx.reply usage
 
-/// Photo messages: graceful fallback until a vision AI provider exists.
-/// (Verified 2026-07-12: DeepSeek's API rejects image content entirely.)
-let handlePhoto (ctx: Context) : JS.Promise<obj> =
-    Common.ensureUser ctx |> ignore
-    Logger.info "Photo received — replied with text-description fallback"
+/// Photo messages: when a vision provider is configured (VISION_API_KEY),
+/// describe the photo -> feed the description to the DeepSeek nutrition
+/// estimator. Otherwise fall back to asking for a text description.
+/// (DeepSeek itself rejects image content — verified 2026-07-12.)
+let handlePhoto (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
+    promise {
+        match Common.ensureUser ctx with
+        | None -> return! ctx.reply "Sorry, I couldn't identify you — please try again."
+        | Some user ->
+            if not (Ai.Vision.enabled config) then
+                Logger.info "Photo received — no vision provider configured, text fallback"
 
-    ctx.reply (
-        "📸 Nice photo! I can't analyse images yet — my AI is text-only for now.\n"
-        + "Describe the meal instead and I'll estimate everything:\n"
-        + "/food chicken rice with extra egg, large portion"
-    )
+                return!
+                    ctx.reply (
+                        "📸 Nice photo! Photo analysis isn't switched on yet (needs a VISION_API_KEY in .env).\n"
+                        + "Describe the meal instead and I'll estimate everything:\n"
+                        + "/food chicken rice with extra egg, large portion"
+                    )
+            else
+                let photos =
+                    ctx.message |> Option.bind (fun m -> m.photo) |> Option.defaultValue [||]
+
+                if photos.Length = 0 then
+                    return! ctx.reply "I couldn't read that photo — please try sending it again."
+                else
+                    ctx.sendChatAction "typing" |> ignore
+
+                    // Telegram sends several sizes, smallest first. ~1280px is
+                    // plenty for food recognition and keeps requests small.
+                    let best =
+                        photos
+                        |> Array.filter (fun p -> p.width <= 1300.0)
+                        |> Array.sortByDescending (fun p -> p.width)
+                        |> Array.tryHead
+                        |> Option.defaultValue photos.[photos.Length - 1]
+
+                    let! linkObj = ctx.telegram.getFileLink best.file_id
+                    let url: string = !!(linkObj?href)
+                    let! downloaded = Ai.Vision.downloadAsDataUri url
+
+                    match downloaded with
+                    | Error err ->
+                        Logger.error ("Photo download failed: " + err)
+                        return! ctx.reply "😓 I couldn't download that photo — please try again."
+                    | Ok dataUri ->
+                        let caption = ctx.message |> Option.bind (fun m -> m.caption)
+                        let! described = Ai.Vision.describeImage config dataUri caption
+
+                        match described with
+                        | Error "NOT_FOOD" ->
+                            return!
+                                ctx.reply
+                                    "🤔 That doesn't look like food to me. If it is, describe it: /food chicken rice"
+                        | Error err ->
+                            Logger.error ("Vision analysis failed: " + err)
+
+                            return!
+                                ctx.reply
+                                    "😓 Photo analysis failed — describe it instead: /food chicken rice, large portion"
+                        | Ok description ->
+                            Logger.info (sprintf "%s photo described: %s" user.FirstName description)
+                            let! result = Ai.FoodAnalyzer.analyse config description
+
+                            match result with
+                            | Ok nutrition ->
+                                let meal = Meals.add user.Id nutrition
+                                let totals = Meals.totalsOn user.Id meal.Date
+
+                                return!
+                                    ctx.reply (mealText meal totals + "\n\n📸 What I saw: " + description)
+                            | Error err ->
+                                Logger.warn ("Food analysis of photo description failed: " + err)
+
+                                return!
+                                    ctx.reply
+                                        "😓 I couldn't turn that photo into a meal log — try /food with a short description."
+    }

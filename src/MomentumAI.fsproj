@@ -33,6 +33,7 @@
     <Compile Include="Ai/Encourage.fs" />
     <Compile Include="Ai/Planner.fs" />
     <Compile Include="Ai/FoodAnalyzer.fs" />
+    <Compile Include="Ai/Vision.fs" />
     <Compile Include="Commands/Common.fs" />
     <Compile Include="Commands/Basic.fs" />
     <Compile Include="Commands/Quotes.fs" />

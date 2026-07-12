@@ -46,8 +46,11 @@ before starting a new build.
   round-trip). Records round-trip fine; option fields serialize as
   missing/null.
 - **DeepSeek's API is TEXT-ONLY** (verified 2026-07-12: rejects `image_url`
-  content even on deepseek-v4 models). Photo features need a separate vision
-  provider; Sharp is deliberately not installed until one exists.
+  content even on deepseek-v4 models). Photo food logging therefore goes
+  through `src/Ai/Vision.fs` — a pluggable OpenAI-compatible vision bridge
+  (VISION_API_KEY/BASE_URL/MODEL in .env; Gemini free tier recommended) whose
+  text description feeds the DeepSeek FoodAnalyzer. No key = graceful text
+  fallback. Telegram compresses photos server-side, so Sharp stays uninstalled.
 - Each phase bumps the version in BOTH `src/Config/Env.fs` (`Version` literal)
   and `package.json`, plus the phase name in `/version` (Commands/Basic.fs).
 - Schedulers share the one-minute cron tick pattern (`src/Scheduler/`); user

@@ -15,22 +15,18 @@ type TelegramUser =
 type ChatLite =
     abstract id: float
 
+/// One resolution variant of a photo (Telegram sends several, smallest first).
+[<AllowNullLiteral>]
+type PhotoSize =
+    abstract file_id: string
+    abstract width: float
+    abstract height: float
+
 [<AllowNullLiteral>]
 type IncomingMessage =
     abstract text: string option
-
-/// The per-update context Telegraf hands to every command/button handler.
-[<AllowNullLiteral>]
-type Context =
-    abstract from: TelegramUser option
-    abstract chat: ChatLite option
-    abstract message: IncomingMessage option
-    abstract reply: text: string -> JS.Promise<obj>
-    abstract reply: text: string * extra: obj -> JS.Promise<obj>
-    abstract sendChatAction: action: string -> JS.Promise<obj>
-    /// Dismisses the loading spinner after an inline button press.
-    abstract answerCbQuery: unit -> JS.Promise<obj>
-    abstract editMessageText: text: string -> JS.Promise<obj>
+    abstract photo: PhotoSize[] option
+    abstract caption: string option
 
 [<AllowNullLiteral>]
 type BotInfo =
@@ -40,6 +36,22 @@ type BotInfo =
 type TelegramApi =
     abstract getMe: unit -> JS.Promise<BotInfo>
     abstract sendMessage: chatId: float * text: string -> JS.Promise<obj>
+    /// Returns a URL object (use its .href) for downloading a file.
+    abstract getFileLink: fileId: string -> JS.Promise<obj>
+
+/// The per-update context Telegraf hands to every command/button handler.
+[<AllowNullLiteral>]
+type Context =
+    abstract from: TelegramUser option
+    abstract chat: ChatLite option
+    abstract message: IncomingMessage option
+    abstract telegram: TelegramApi
+    abstract reply: text: string -> JS.Promise<obj>
+    abstract reply: text: string * extra: obj -> JS.Promise<obj>
+    abstract sendChatAction: action: string -> JS.Promise<obj>
+    /// Dismisses the loading spinner after an inline button press.
+    abstract answerCbQuery: unit -> JS.Promise<obj>
+    abstract editMessageText: text: string -> JS.Promise<obj>
 
 [<AllowNullLiteral>]
 type Telegraf =
