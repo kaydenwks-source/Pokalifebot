@@ -56,6 +56,9 @@ let create (config: Env.AppConfig) : Telegraf =
     bot.command ("height", Commands.Body.handleHeight)
     bot.command ("progress", Commands.Body.handleProgress config)
 
+    // Phase 9 — exercise tracker
+    bot.command ("workout", Commands.Workouts.handle config)
+
     // Last-resort error handler: log the failure but keep the bot running.
     bot.catch (
         System.Func<_, _, _>(fun err ctx ->

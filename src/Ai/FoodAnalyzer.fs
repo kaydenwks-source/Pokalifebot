@@ -20,16 +20,6 @@ let private systemPrompt =
       "Round to sensible whole-ish numbers." ]
     |> String.concat " "
 
-/// Numeric field that is actually a number (rejects strings and NaN).
-let private numField (json: obj) (key: string) : float option =
-    let v: obj = json?(key)
-
-    if jsTypeof v = "number" then
-        let f = unbox<float> v
-        if f = f then Some f else None // NaN fails self-equality
-    else
-        None
-
 let analyse (config: Env.AppConfig) (description: string) : JS.Promise<Result<Nutrition, string>> =
     promise {
         let! result = DeepSeek.chatJson config systemPrompt ("Meal: " + description)
@@ -43,16 +33,17 @@ let analyse (config: Env.AppConfig) (description: string) : JS.Promise<Result<Nu
                 match (!!json?error: string option) with
                 | Some e -> return Error e
                 | None ->
-                    let name: string = !!json?name
-
                     let gram key =
-                        numField json key |> Option.defaultValue 0.0 |> max 0.0 |> min 1000.0
+                        DeepSeek.jsonNumber json key
+                        |> Option.defaultValue 0.0
+                        |> max 0.0
+                        |> min 1000.0
 
-                    match numField json "calories" with
-                    | Some kcal when kcal >= 0.0 && kcal <= 6000.0 && not (isNull (box name)) && name.Trim() <> "" ->
+                    match DeepSeek.jsonString json "name", DeepSeek.jsonNumber json "calories" with
+                    | Some name, Some kcal when kcal >= 0.0 && kcal <= 6000.0 ->
                         return
                             Ok
-                                { Name = name.Trim()
+                                { Name = name
                                   Calories = int kcal
                                   Protein = gram "protein"
                                   Carbs = gram "carbs"

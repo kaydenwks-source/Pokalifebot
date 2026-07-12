@@ -174,12 +174,24 @@ let handleToday (ctx: Context) : JS.Promise<obj> =
             | Some log -> sprintf "😴 Sleep: %s logged" (Time.formatDuration log.DurationMinutes)
             | None -> "😴 Sleep: not logged (/sleep 23:30 07:00)"
 
+        let workouts = Workouts.onDate user.Id todayStr
+
+        let workoutLine =
+            if workouts.Length = 0 then
+                "🏋️ Workouts: none yet"
+            else
+                sprintf
+                    "🏋️ Workouts: %s (~%d kcal)"
+                    (workouts |> Array.map (fun w -> w.Exercise) |> String.concat ", ")
+                    (workouts |> Array.sumBy (fun w -> w.CaloriesBurned))
+
         [ sprintf "📅 Today — %s %s" (Time.dayName now) todayStr
           ""
           habitsLine
           tasksLine
           remindersLine
           sleepLine
+          workoutLine
           ""
           "Want a schedule? /plan" ]
         |> String.concat "\n"

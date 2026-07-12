@@ -66,7 +66,11 @@ let private helpText =
       "/weight 72.5 — log weight · /bodyfat 18.5 · /height 175"
       "/progress — trends, BMI and AI analysis"
       ""
-      "Coming soon: workout tracking, goals and more." ]
+      "🏋️ Workouts"
+      "/workout bench press 3x8 60kg — log in plain words"
+      "/workout history · prs · tips"
+      ""
+      "Coming soon: goals, weekly reports and more." ]
     |> String.concat "\n"
 
 let private startText name =
@@ -97,4 +101,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 8 (weight tracker)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 9 (exercise tracker)" Env.Version)
