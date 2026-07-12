@@ -34,6 +34,10 @@ let create (config: Env.AppConfig) : Telegraf =
     bot.command ("reminders", Commands.Reminders.handleList)
     bot.command ("deletereminder", Commands.Reminders.handleDelete)
 
+    // Phase 5 — habit tracker
+    bot.command ("habit", Commands.Habits.handle config)
+    bot.command ("habits", Commands.Habits.handleListShortcut)
+
     // Last-resort error handler: log the failure but keep the bot running.
     bot.catch (
         System.Func<_, _, _>(fun err ctx ->
