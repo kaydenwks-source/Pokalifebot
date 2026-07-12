@@ -63,15 +63,17 @@ let deleteByIndex (userId: float) (index: int) : TaskItem option =
         saveAll (getAll () |> Array.filter (fun x -> x.Id <> t.Id))
         t)
 
-/// How many tasks the user completed today (for the little dopamine hit).
-let doneTodayCount (userId: float) : int =
-    let today = System.DateTime.Now.ToString("yyyy-MM-dd")
-
+/// Tasks completed on/after a cutoff "yyyy-MM-dd" (stamps sort as strings).
+let completedSince (userId: float) (cutoff: string) : int =
     getAll ()
     |> Array.filter (fun t ->
         t.UserId = userId
         && t.Done
         && (match t.DoneAt with
-            | Some d -> d.StartsWith today
+            | Some d -> d >= cutoff
             | None -> false))
     |> Array.length
+
+/// How many tasks the user completed today (for the little dopamine hit).
+let doneTodayCount (userId: float) : int =
+    completedSince userId (System.DateTime.Now.ToString("yyyy-MM-dd"))
