@@ -37,7 +37,8 @@ let upsert (id: float) (chatId: float) (firstName: string) (username: string opt
               FirstName = firstName
               Username = username
               QuoteCategory = Categories.defaultCategory
-              QuoteTime = None }
+              QuoteTime = None
+              NudgesEnabled = None }
 
         saveAll (Array.append users [| fresh |])
         Logger.info (sprintf "New user registered: %s (id %.0f)" firstName id)
@@ -53,6 +54,12 @@ let setCategory (id: float) (category: string) =
 
 let setQuoteTime (id: float) (time: string option) =
     update id (fun u -> { u with QuoteTime = time })
+
+let setNudges (id: float) (enabled: bool) =
+    update id (fun u -> { u with NudgesEnabled = Some enabled })
+
+/// Nudges default ON — only an explicit "off" disables them.
+let nudgesOn (user: Models.User.UserProfile) = user.NudgesEnabled <> Some false
 
 /// Users who opted into the daily scheduled quote.
 let withDailyQuote () : UserProfile[] =

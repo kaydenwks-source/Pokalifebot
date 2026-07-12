@@ -9,7 +9,8 @@ type UserProfile =
       FirstName: string
       Username: string option
       QuoteCategory: string
-      QuoteTime: string option } // "HH:mm" 24h server-local, None = off
+      QuoteTime: string option // "HH:mm" 24h server-local, None = off
+      NudgesEnabled: bool option } // habit nudges; None = default ON
 
 module Categories =
     let all =

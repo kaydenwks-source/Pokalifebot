@@ -37,6 +37,7 @@ let create (config: Env.AppConfig) : Telegraf =
     // Phase 5 — habit tracker
     bot.command ("habit", Commands.Habits.handle config)
     bot.command ("habits", Commands.Habits.handleListShortcut)
+    bot.command ("nudges", Commands.Habits.handleNudges)
 
     // Last-resort error handler: log the failure but keep the bot running.
     bot.catch (

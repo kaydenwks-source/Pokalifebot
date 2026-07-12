@@ -52,6 +52,7 @@ let private helpText =
       "🔥 Habits"
       "/habit add <name> [daily|weekly|monthly] — start tracking"
       "/habit done <name> — check off; /habit list · stats · remove"
+      "/nudges on|off — daily habit reminders at 08:00 and 19:00"
       ""
       "Coming soon: daily planner, calorie tracking and more." ]
     |> String.concat "\n"

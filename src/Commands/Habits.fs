@@ -181,3 +181,21 @@ let handleListShortcut (ctx: Context) : JS.Promise<obj> =
     match Common.ensureUser ctx with
     | None -> ctx.reply "Sorry, I couldn't identify you — please try again."
     | Some user -> showList user ctx
+
+/// /nudges [on|off] — toggle the 08:00/19:00 habit reminders.
+let handleNudges (ctx: Context) : JS.Promise<obj> =
+    match Common.ensureUser ctx with
+    | None -> ctx.reply "Sorry, I couldn't identify you — please try again."
+    | Some user ->
+        match Common.commandArg ctx |> Option.map (fun s -> s.Trim().ToLowerInvariant()) with
+        | Some "off" ->
+            Users.setNudges user.Id false
+            Logger.info (sprintf "%s turned habit nudges off" user.FirstName)
+            ctx.reply "🔕 Habit nudges off. Re-enable anytime with /nudges on."
+        | Some "on" ->
+            Users.setNudges user.Id true
+            Logger.info (sprintf "%s turned habit nudges on" user.FirstName)
+            ctx.reply "🔔 Habit nudges on — I'll check in at 08:00 and 19:00 daily."
+        | _ ->
+            let state = if Users.nudgesOn user then "ON 🔔" else "OFF 🔕"
+            ctx.reply (sprintf "Habit nudges are %s (08:00 & 19:00 daily). Switch with /nudges on or /nudges off." state)

@@ -36,6 +36,7 @@
     <Compile Include="Commands/Admin.fs" />
     <Compile Include="Scheduler/DailyQuotes.fs" />
     <Compile Include="Scheduler/Reminders.fs" />
+    <Compile Include="Scheduler/HabitNudges.fs" />
     <Compile Include="Bot.fs" />
     <Compile Include="Index.fs" />
   </ItemGroup>
