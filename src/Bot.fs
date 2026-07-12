@@ -39,6 +39,12 @@ let create (config: Env.AppConfig) : Telegraf =
     bot.command ("habits", Commands.Habits.handleListShortcut)
     bot.command ("nudges", Commands.Habits.handleNudges)
 
+    // Phase 6 — daily planner
+    bot.command ("task", Commands.Tasks.handleTask)
+    bot.command ("tasks", Commands.Tasks.handleTasks)
+    bot.command ("today", Commands.Tasks.handleToday)
+    bot.command ("plan", Commands.Tasks.handlePlan config)
+
     // Last-resort error handler: log the failure but keep the bot running.
     bot.catch (
         System.Func<_, _, _>(fun err ctx ->

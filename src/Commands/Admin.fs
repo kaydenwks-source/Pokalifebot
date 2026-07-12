@@ -25,7 +25,8 @@ let handle (config: Env.AppConfig) (ctx: Context) =
           sprintf "Users: %d (daily quote on: %d)" users.Length dailyQuotesOn
           sprintf "Sleep logs: %d" sleepLogCount
           sprintf "Reminders: %d" (Reminders.getAll () |> Array.length)
-          sprintf "Habits: %d" (Habits.getAll () |> Array.length) ]
+          sprintf "Habits: %d" (Habits.getAll () |> Array.length)
+          sprintf "Tasks: %d" (Tasks.getAll () |> Array.length) ]
         |> String.concat "\n"
         |> ctx.reply
     | Some from, _ ->

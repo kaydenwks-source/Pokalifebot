@@ -54,7 +54,11 @@ let private helpText =
       "/habit done <name> — check off; /habit list · stats · remove"
       "/nudges on|off — daily habit reminders at 08:00 and 19:00"
       ""
-      "Coming soon: daily planner, calorie tracking and more." ]
+      "📝 Planner"
+      "/task add <text> [!high|!low] — add a task; /task done <n>"
+      "/tasks — open tasks · /today — day at a glance · /plan — AI schedule"
+      ""
+      "Coming soon: calorie tracking, weight tracking and more." ]
     |> String.concat "\n"
 
 let private startText name =
@@ -85,4 +89,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 5 (habit tracker)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 6 (daily planner)" Env.Version)
