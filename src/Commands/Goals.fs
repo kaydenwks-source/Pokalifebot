@@ -15,6 +15,7 @@ let private usage =
       "/goal add read 20 books — set a goal (AI works out the numbers)"
       "/goal add save $5000 · /goal add run 100 km · /goal add finish python course"
       "/goals — progress overview"
+      "/goal plan <number> — your coach's 5-step path"
       "/goal log <number> <amount> — add progress (amount optional, default 1)"
       "/goal done <number> — finish a goal outright"
       "/goal delete <number> — remove one"
@@ -70,19 +71,64 @@ let private addGoal (config: Env.AppConfig) (user: UserProfile) (description: st
             let goal = Goals.add user.Id p.Name p.Target p.Unit
             Logger.info (sprintf "%s added goal: %s (%g %s)" user.FirstName goal.Name goal.TargetValue goal.Unit)
 
+            // Coach breakdown: big goal -> 5 achievable steps (non-fatal on failure).
+            let! stepsResult = Ai.GoalParser.breakdown config goal.Name goal.TargetValue goal.Unit
+
+            let stepsBlock =
+                match stepsResult with
+                | Ok steps ->
+                    Goals.setSteps goal steps |> ignore
+
+                    "\n\n🧭 Your 5-step path:\n"
+                    + (steps |> Array.mapi (fun i s -> sprintf "%d. %s" (i + 1) s) |> String.concat "\n")
+                | Error err ->
+                    Logger.warn ("Goal breakdown failed: " + err)
+                    ""
+
             let unitStr = if goal.Unit = "" then "" else " " + goal.Unit
+
+            let index =
+                Goals.forUser user.Id
+                |> Array.findIndex (fun g -> g.Id = goal.Id)
+                |> (+) 1
 
             return!
                 ctx.reply (
                     sprintf
-                        "🎯 Goal set: %s (%g%s)\n%s 0%%\n\nLog progress with /goal log %d <amount>"
+                        "🎯 Goal set: %s (%g%s)\n%s 0%%%s\n\nLog progress with /goal log %d <amount> · path anytime: /goal plan %d"
                         goal.Name
                         goal.TargetValue
                         unitStr
                         (bar 0)
-                        (Goals.forUser user.Id |> Array.findIndex (fun g -> g.Id = goal.Id) |> (+) 1)
+                        stepsBlock
+                        index
+                        index
                 )
     }
+
+/// /goal plan <n> — the coach's step path with progress-based checkmarks.
+let private showPlan (user: UserProfile) (arg: string) (ctx: Context) =
+    match System.Int32.TryParse (arg.Trim()) with
+    | true, n ->
+        match Goals.byIndex user.Id n with
+        | None -> ctx.reply "That number isn't in your list — check /goals"
+        | Some goal ->
+            match goal.Steps with
+            | Some steps when steps.Length > 0 ->
+                let pct = Goals.percentOf goal
+
+                let lines =
+                    steps
+                    |> Array.mapi (fun i s ->
+                        let threshold = (i + 1) * 100 / steps.Length
+                        let mark = if pct >= threshold then "✅" else "⬜"
+                        sprintf "%s %d. %s" mark (i + 1) s)
+                    |> String.concat "\n"
+
+                ctx.reply (sprintf "🧭 %s — %d%%\n\n%s" goal.Name pct lines)
+            | _ ->
+                ctx.reply "That goal has no step plan (it was set before plans existed). New goals get one automatically."
+    | _ -> ctx.reply "Usage: /goal plan <number>"
 
 let private logProgress
     (config: Env.AppConfig)
@@ -178,6 +224,8 @@ let handle (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
             | "add" when rest.Trim() <> "" -> addGoal config user rest ctx
             | "add" -> ctx.reply "What's the goal? e.g. /goal add read 20 books"
             | "list" -> showList user ctx
+            | "plan"
+            | "steps" -> showPlan user rest ctx
             | "log" -> logProgress config user (Array.skip 1 args) ctx
             | "done" -> markDone config user rest ctx
             | "delete"

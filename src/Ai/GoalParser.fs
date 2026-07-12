@@ -47,3 +47,39 @@ let parse (config: Env.AppConfig) (input: string) : JS.Promise<Result<ParsedGoal
             with ex ->
                 return Error("Could not parse AI response: " + ex.Message)
     }
+
+let private coachPrompt =
+    [ "You are Momentum AI, a supportive productivity coach."
+      "Break the user's goal into EXACTLY 5 progressive, concrete, achievable"
+      "steps that build from an easy first win to the finish line."
+      "Each step is ONE short actionable sentence, max 12 words."
+      "Reply ONLY with JSON: {\"steps\": [string, string, string, string, string]}" ]
+    |> String.concat " "
+
+/// Coach breakdown: big goal -> 5 achievable steps.
+let breakdown
+    (config: Env.AppConfig)
+    (goalName: string)
+    (target: float)
+    (unit: string)
+    : JS.Promise<Result<string[], string>> =
+    promise {
+        let described =
+            if unit = "" then goalName else sprintf "%s (target: %g %s)" goalName target unit
+
+        let! result = DeepSeek.chatJson config coachPrompt ("Goal: " + described)
+
+        match result with
+        | Error e -> return Error e
+        | Ok raw ->
+            try
+                let json = JS.JSON.parse raw
+                let steps: string[] = !!json?steps
+
+                if isNull (box steps) || steps.Length < 3 then
+                    return Error "AI returned no usable steps"
+                else
+                    return Ok(steps |> Array.truncate 5 |> Array.map (fun s -> s.Trim()))
+            with ex ->
+                return Error("Could not parse AI response: " + ex.Message)
+    }

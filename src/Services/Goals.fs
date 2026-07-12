@@ -34,10 +34,16 @@ let add (userId: float) (name: string) (target: float) (unit: string) : Goal =
           Unit = unit.Trim()
           Progress = 0.0
           CreatedAt = System.DateTime.Now.ToString("yyyy-MM-dd")
-          CompletedAt = None }
+          CompletedAt = None
+          Steps = None }
 
     saveAll (Array.append (getAll ()) [| goal |])
     goal
+
+let setSteps (goal: Goal) (steps: string[]) : Goal =
+    let updated = { goal with Steps = Some steps }
+    saveAll (getAll () |> Array.map (fun g -> if g.Id = goal.Id then updated else g))
+    updated
 
 /// Delete by 1-based position in the user's sorted list (what /goals shows).
 let deleteByIndex (userId: float) (index: int) : Goal option =
