@@ -60,5 +60,6 @@ let load () : Result<AppConfig, string list> =
                 |> Option.defaultValue "https://generativelanguage.googleapis.com/v1beta/openai"
               VisionModel =
                 Node.tryGetEnv "VISION_MODEL"
-                |> Option.defaultValue "gemini-2.0-flash" }
+                // 2.0-flash has zero free-tier quota now; 2.5-flash works
+                |> Option.defaultValue "gemini-2.5-flash" }
     | _ -> Error missing
