@@ -22,6 +22,7 @@
     <Compile Include="Models/Weight.fs" />
     <Compile Include="Models/Workout.fs" />
     <Compile Include="Models/Commitment.fs" />
+    <Compile Include="Models/Goal.fs" />
     <Compile Include="Services/Storage.fs" />
     <Compile Include="Services/Users.fs" />
     <Compile Include="Services/SleepLogs.fs" />
@@ -33,6 +34,7 @@
     <Compile Include="Services/Workouts.fs" />
     <Compile Include="Services/Commitments.fs" />
     <Compile Include="Services/Energy.fs" />
+    <Compile Include="Services/Goals.fs" />
     <Compile Include="Ai/DeepSeek.fs" />
     <Compile Include="Ai/Quotes.fs" />
     <Compile Include="Ai/Sleep.fs" />
@@ -43,6 +45,7 @@
     <Compile Include="Ai/Vision.fs" />
     <Compile Include="Ai/Progress.fs" />
     <Compile Include="Ai/Workouts.fs" />
+    <Compile Include="Ai/GoalParser.fs" />
     <Compile Include="Commands/Common.fs" />
     <Compile Include="Commands/Basic.fs" />
     <Compile Include="Commands/Quotes.fs" />
@@ -54,6 +57,7 @@
     <Compile Include="Commands/Body.fs" />
     <Compile Include="Commands/Workouts.fs" />
     <Compile Include="Commands/Busy.fs" />
+    <Compile Include="Commands/Goals.fs" />
     <Compile Include="Commands/Admin.fs" />
     <Compile Include="Scheduler/DailyQuotes.fs" />
     <Compile Include="Scheduler/Reminders.fs" />

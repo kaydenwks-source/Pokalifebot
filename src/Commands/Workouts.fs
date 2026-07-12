@@ -66,13 +66,32 @@ let private logWorkout (config: Env.AppConfig) (user: UserProfile) (description:
                 else
                     None
 
+            // Cardio distance auto-feeds any goals measured in km.
+            let goalLines =
+                match entry.DistanceKm with
+                | Some km ->
+                    Goals.autoProgress user.Id "km" km
+                    |> Array.map (fun r ->
+                        let g = r.Goal
+
+                        let extra =
+                            match r.Milestone with
+                            | Some 100 -> " 🏆 GOAL COMPLETE!"
+                            | Some m -> sprintf " 🎉 %d%%!" m
+                            | None -> ""
+
+                        sprintf "🎯 +%g km → %s (%g/%g km)%s" km g.Name g.Progress g.TargetValue extra)
+                    |> Array.toList
+                | None -> []
+
             let lines =
-                [ Some(sprintf "🏋️ Logged: %s" entry.Exercise)
-                  (let d = details entry in if d = "" then None else Some d)
-                  Some(sprintf "~%d kcal burned" entry.CaloriesBurned)
-                  prLine
-                  energyLine ]
-                |> List.choose id
+                ([ Some(sprintf "🏋️ Logged: %s" entry.Exercise)
+                   (let d = details entry in if d = "" then None else Some d)
+                   Some(sprintf "~%d kcal burned" entry.CaloriesBurned)
+                   prLine
+                   energyLine ]
+                 |> List.choose id)
+                @ goalLines
 
             return! ctx.reply (String.concat "\n" lines)
     }

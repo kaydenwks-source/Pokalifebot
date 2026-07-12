@@ -63,6 +63,10 @@ let create (config: Env.AppConfig) : Telegraf =
     bot.command ("busy", Commands.Busy.handle)
     bot.command ("target", Commands.Body.handleTarget)
 
+    // Phase 10 — goal system
+    bot.command ("goal", Commands.Goals.handle config)
+    bot.command ("goals", Commands.Goals.handleListShortcut)
+
     // Last-resort error handler: log the failure but keep the bot running.
     bot.catch (
         System.Func<_, _, _>(fun err ctx ->

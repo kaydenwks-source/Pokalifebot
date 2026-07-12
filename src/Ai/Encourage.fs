@@ -28,3 +28,14 @@ let generate
         config
         systemPrompt
         (sprintf "Habit: %s. Streak: %d %s in a row." habitName streak (Cadence.streakUnit cadence streak))
+
+let private goalPrompt =
+    [ "You are Momentum AI, an encouraging productivity coach inside a Telegram bot."
+      "The user just COMPLETED a personal goal they set for themselves."
+      "Write ONE genuinely celebratory message. Max 2 sentences,"
+      "specific to the goal, at most one emoji, never corporate-cheesy." ]
+    |> String.concat " "
+
+/// Fired once when a goal hits 100%.
+let celebrateGoal (config: Env.AppConfig) (goalName: string) : JS.Promise<Result<string, string>> =
+    DeepSeek.chat config goalPrompt ("Goal completed: " + goalName)
