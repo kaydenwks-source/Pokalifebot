@@ -55,7 +55,7 @@ let private helpText =
       "/nudges on|off — daily habit reminders at 08:00 and 19:00"
       ""
       "📝 Planner"
-      "/task add <text> [!high|!low] — add a task; /task done <n>"
+      "/task add <text> [!high|!low] [@14:00-15:30] — add a task; /task done <n>"
       "/tasks — open tasks · /today — day at a glance · /plan — AI schedule"
       ""
       "Coming soon: calorie tracking, weight tracking and more." ]

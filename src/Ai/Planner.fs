@@ -12,9 +12,13 @@ open Utils
 let private systemPrompt =
     [ "You are Momentum AI's day planner inside a Telegram bot."
       "Create a realistic time-blocked plan from NOW until the user's bedtime."
-      "Include their open tasks (high priority first), their pending habits,"
+      "Fixed commitments have exact times and are IMMOVABLE — place them at"
+      "exactly their given times and schedule everything else around them,"
+      "including travel/transition buffer before and after."
+      "Include the flexible open tasks (high priority first), pending habits,"
       "a meal at a sensible time, and short breaks."
       "Be realistic: leave buffer time, no block longer than 90 minutes without a break."
+      "Skip fixed commitments whose time has already passed."
       "Format: one line per block, 'HH:MM–HH:MM  activity'. Maximum 12 lines."
       "After the blocks add ONE short encouraging line."
       "Plain text only — no markdown, no headers." ]
@@ -27,11 +31,28 @@ let plan
     (pendingHabits: Habit[])
     (bedtime: string)
     : JS.Promise<Result<string, string>> =
-    let taskList =
-        if tasks.Length = 0 then
+    let fixedTasks, flexibleTasks = tasks |> Array.partition (fun t -> t.At.IsSome)
+
+    let fixedList =
+        if fixedTasks.Length = 0 then
             "none"
         else
-            tasks
+            fixedTasks
+            |> Array.map (fun t ->
+                let span =
+                    match t.At, t.Until with
+                    | Some a, Some u -> sprintf "%s-%s" a u
+                    | Some a, None -> a
+                    | _ -> "?"
+
+                sprintf "[at %s] %s" span t.Text)
+            |> String.concat "; "
+
+    let taskList =
+        if flexibleTasks.Length = 0 then
+            "none"
+        else
+            flexibleTasks
             |> Array.map (fun t -> sprintf "[%s] %s" t.Priority t.Text)
             |> String.concat "; "
 
@@ -46,7 +67,8 @@ let plan
               "Now: %s (%s)."
               (System.DateTime.Now.ToString("yyyy-MM-dd HH:mm"))
               (Time.dayName System.DateTime.Now)
-          sprintf "Open tasks: %s." taskList
+          sprintf "Fixed commitments (immovable): %s." fixedList
+          sprintf "Flexible open tasks: %s." taskList
           sprintf "Pending habits today: %s." habitList
           sprintf "Usual bedtime: around %s." bedtime ]
         |> String.concat " "

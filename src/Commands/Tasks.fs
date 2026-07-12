@@ -12,7 +12,9 @@ open Config
 let private usage =
     [ "📝 Tasks & planning"
       ""
-      "/task add <text> [!high|!low] — add a task (medium if omitted)"
+      "/task add <text> [!high|!low] [@HH:MM or @HH:MM-HH:MM] — add a task"
+      "   e.g. /task add dentist @14:00-15:30 · /task add essay !high"
+      "   Timed tasks are fixed — /plan schedules everything else around them."
       "/task done <number> — complete one"
       "/task delete <number> — remove one"
       "/tasks — your open tasks"
@@ -21,7 +23,7 @@ let private usage =
     |> String.concat "\n"
 
 let private describe (t: TaskItem) =
-    sprintf "%s %s" (Priority.marker t.Priority) t.Text
+    sprintf "%s %s%s" (Priority.marker t.Priority) t.Text (timeLabel t)
 
 let private showTasks (user: UserProfile) (ctx: Context) =
     let mine = Tasks.openFor user.Id
@@ -38,23 +40,42 @@ let private showTasks (user: UserProfile) (ctx: Context) =
 
 let private addTask (user: UserProfile) (rest: string[]) (ctx: Context) =
     if rest.Length = 0 then
-        ctx.reply "Usage: /task add <text> [!high|!low]\nExample: /task add finish essay !high"
+        ctx.reply
+            "Usage: /task add <text> [!high|!low] [@HH:MM-HH:MM]\nExamples: /task add finish essay !high · /task add dentist @14:00-15:30"
     else
-        // A trailing "!high"/"!low"/"!med" sets priority; default medium.
-        let priority, textParts =
-            let last = rest.[rest.Length - 1]
+        // "!token" sets priority, "@token" sets a fixed time — both may
+        // appear anywhere; everything else is the task text.
+        let isPriorityToken (t: string) = t.StartsWith "!" && (Priority.tryParse t).IsSome
+        let isTimeToken (t: string) = (Schedule.tryParseToken t).IsSome
 
-            if last.StartsWith "!" then
-                match Priority.tryParse last with
-                | Some p when rest.Length > 1 -> p, Array.sub rest 0 (rest.Length - 1)
-                | _ -> "medium", rest
-            else
-                "medium", rest
+        let priority =
+            rest
+            |> Array.tryPick (fun t -> if t.StartsWith "!" then Priority.tryParse t else None)
+            |> Option.defaultValue "medium"
+
+        let schedule = rest |> Array.tryPick Schedule.tryParseToken
+
+        let textParts =
+            rest |> Array.filter (fun t -> not (isPriorityToken t || isTimeToken t))
 
         let text = String.concat " " textParts
-        let task = Tasks.add user.Id text priority
-        Logger.info (sprintf "%s added task: %s (%s)" user.FirstName task.Text task.Priority)
-        ctx.reply (sprintf "✅ Added %s\nSee the list: /tasks" (describe task))
+
+        // "@" tokens with invalid times fall through into the text — warn.
+        let badTimeHint =
+            textParts
+            |> Array.tryFind (fun t -> t.StartsWith "@")
+            |> Option.map (fun t ->
+                sprintf "\nℹ️ \"%s\" isn't a valid time (use @HH:MM or @HH:MM-HH:MM), so I kept it as text." t)
+            |> Option.defaultValue ""
+
+        if text = "" then
+            ctx.reply "The task needs a description too, e.g. /task add dentist @14:00"
+        else
+            let task =
+                Tasks.add user.Id text priority (schedule |> Option.map fst) (schedule |> Option.bind snd)
+
+            Logger.info (sprintf "%s added task: %s (%s)%s" user.FirstName task.Text task.Priority (timeLabel task))
+            ctx.reply (sprintf "✅ Added %s%s\nSee the list: /tasks" (describe task) badTimeHint)
 
 let private completeTask (user: UserProfile) (arg: string) (ctx: Context) =
     match System.Int32.TryParse (arg.Trim()) with

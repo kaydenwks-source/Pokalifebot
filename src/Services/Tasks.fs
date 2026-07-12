@@ -17,7 +17,13 @@ let openFor (userId: float) : TaskItem[] =
     |> Array.filter (fun t -> t.UserId = userId && not t.Done)
     |> Array.sortBy (fun t -> Priority.rank t.Priority, t.CreatedAt)
 
-let add (userId: float) (text: string) (priority: string) : TaskItem =
+let add
+    (userId: float)
+    (text: string)
+    (priority: string)
+    (at: string option)
+    (until: string option)
+    : TaskItem =
     let task =
         { Id = System.Guid.NewGuid().ToString().Substring(0, 8)
           UserId = userId
@@ -25,7 +31,9 @@ let add (userId: float) (text: string) (priority: string) : TaskItem =
           Priority = priority
           Done = false
           CreatedAt = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm")
-          DoneAt = None }
+          DoneAt = None
+          At = at
+          Until = until }
 
     saveAll (Array.append (getAll ()) [| task |])
     task
