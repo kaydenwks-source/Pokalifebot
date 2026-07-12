@@ -49,9 +49,15 @@ type Telegraf =
     abstract command: command: string * handler: (Context -> JS.Promise<obj>) -> unit
     /// Fires when an inline button with matching callback_data is pressed.
     abstract action: trigger: string * handler: (Context -> JS.Promise<obj>) -> unit
+    /// Fires for updates matching a telegraf/filters predicate.
+    abstract on: filter: obj * handler: (Context -> JS.Promise<obj>) -> unit
     abstract catch: handler: System.Func<obj, Context, unit> -> unit
     abstract launch: onLaunch: (unit -> unit) -> JS.Promise<unit>
     abstract stop: reason: string -> unit
+
+/// telegraf/filters: messageFilter "photo" matches photo messages, etc.
+[<Import("message", "telegraf/filters")>]
+let messageFilter: string -> obj = jsNative
 
 [<Import("Telegraf", "telegraf")>]
 let private telegrafClass: obj = jsNative
