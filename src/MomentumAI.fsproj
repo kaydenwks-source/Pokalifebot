@@ -66,6 +66,7 @@
     <Compile Include="Scheduler/Reminders.fs" />
     <Compile Include="Scheduler/HabitNudges.fs" />
     <Compile Include="Scheduler/WeeklyReports.fs" />
+    <Compile Include="Scheduler/MonthlyReports.fs" />
     <Compile Include="Bot.fs" />
     <Compile Include="Index.fs" />
   </ItemGroup>

@@ -15,6 +15,7 @@ let private start (config: Env.AppConfig) =
         Scheduler.Reminders.start bot
         Scheduler.HabitNudges.start bot
         Scheduler.WeeklyReports.start config bot
+        Scheduler.MonthlyReports.start config bot
 
         // Graceful shutdown on Ctrl+C or a kill signal.
         Node.nodeProcess.once ("SIGINT", fun _ ->

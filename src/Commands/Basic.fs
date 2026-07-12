@@ -77,9 +77,10 @@ let private helpText =
       "/goal log <n> <amount> — km goals auto-fill from cardio!"
       ""
       "📊 Reports"
-      "/report — your week in review (auto every Sunday 20:00)"
+      "/report — week in review (auto Sundays 20:00)"
+      "/report month — 30-day deep-dive with productivity score (auto 1st)"
       ""
-      "Coming soon: monthly reports, AI coach and more." ]
+      "Coming soon: AI coach, settings and more." ]
     |> String.concat "\n"
 
 let private startText name =
@@ -110,4 +111,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 11 (weekly reports)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 12 (monthly reports)" Env.Version)
