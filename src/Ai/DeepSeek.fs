@@ -19,20 +19,17 @@ let private fetch (url: string) (options: obj) : JS.Promise<FetchResponse> = jsN
 
 /// Shared request core. extraBody entries are appended last, so they
 /// override the defaults (later keys win inside createObj).
-let private complete
+let private request
     (config: Env.AppConfig)
     (extraBody: (string * obj) list)
-    (systemPrompt: string)
-    (userMessage: string)
+    (messages: obj[])
     : JS.Promise<Result<string, string>> =
     promise {
         try
             let body =
                 createObj (
                     [ "model" ==> config.DeepSeekModel
-                      "messages"
-                      ==> [| createObj [ "role" ==> "system"; "content" ==> systemPrompt ]
-                             createObj [ "role" ==> "user"; "content" ==> userMessage ] |]
+                      "messages" ==> messages
                       "temperature" ==> 0.7
                       "max_tokens" ==> 1000 ]
                     @ extraBody
@@ -65,19 +62,33 @@ let private complete
             return Error("DeepSeek request failed: " + ex.Message)
     }
 
+let private pair (systemPrompt: string) (userMessage: string) =
+    [| createObj [ "role" ==> "system"; "content" ==> systemPrompt ]
+       createObj [ "role" ==> "user"; "content" ==> userMessage ] |]
+
 /// Send one system+user message pair to DeepSeek and get the reply text.
 let chat (config: Env.AppConfig) (systemPrompt: string) (userMessage: string) =
-    complete config [] systemPrompt userMessage
+    request config [] (pair systemPrompt userMessage)
 
 /// Same, but forces a strict JSON object reply (for parsers/extractors).
 /// Low temperature: parsing wants determinism, not creativity.
 let chatJson (config: Env.AppConfig) (systemPrompt: string) (userMessage: string) =
-    complete
+    request
         config
         [ "response_format" ==> createObj [ "type" ==> "json_object" ]
           "temperature" ==> 0.2 ]
-        systemPrompt
-        userMessage
+        (pair systemPrompt userMessage)
+
+/// Multi-turn chat: `turns` are (role, content) pairs — "user"/"assistant"
+/// alternating — appended after the system prompt. Powers /coach.
+let chatMulti (config: Env.AppConfig) (systemPrompt: string) (turns: (string * string)[]) =
+    let messages =
+        Array.append
+            [| createObj [ "role" ==> "system"; "content" ==> systemPrompt ] |]
+            (turns
+             |> Array.map (fun (role, content) -> createObj [ "role" ==> role; "content" ==> content ]))
+
+    request config [] messages
 
 // ── JSON field helpers shared by all parser modules ─────────────────
 

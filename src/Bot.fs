@@ -67,8 +67,11 @@ let create (config: Env.AppConfig) : Telegraf =
     bot.command ("goal", Commands.Goals.handle config)
     bot.command ("goals", Commands.Goals.handleListShortcut)
 
-    // Phase 11 — weekly reports
+    // Phase 11/12 — reports
     bot.command ("report", Commands.Report.handle config)
+
+    // Phase 13 — AI coach
+    bot.command ("coach", Commands.Coach.handle config)
 
     // Last-resort error handler: log the failure but keep the bot running.
     bot.catch (

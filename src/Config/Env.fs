@@ -10,7 +10,7 @@ open Bindings
 importSideEffects "dotenv/config"
 
 [<Literal>]
-let Version = "0.13.0"
+let Version = "0.14.0"
 
 type AppConfig =
     { BotToken: string
