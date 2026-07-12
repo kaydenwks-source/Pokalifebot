@@ -59,10 +59,14 @@ let private helpText =
       "/tasks — open tasks · /today — day at a glance · /plan — AI schedule"
       ""
       "🍽 Calories"
-      "/food <meal> — log food in plain words, AI estimates macros"
+      "/food <meal> — log food in plain words (or send a photo!)"
       "/calories — today · /calories week · /calories month · /food undo"
       ""
-      "Coming soon: weight tracking, workouts and more." ]
+      "⚖️ Body"
+      "/weight 72.5 — log weight · /bodyfat 18.5 · /height 175"
+      "/progress — trends, BMI and AI analysis"
+      ""
+      "Coming soon: workout tracking, goals and more." ]
     |> String.concat "\n"
 
 let private startText name =
@@ -93,4 +97,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 7 (calorie tracker)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 8 (weight tracker)" Env.Version)

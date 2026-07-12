@@ -38,7 +38,8 @@ let upsert (id: float) (chatId: float) (firstName: string) (username: string opt
               Username = username
               QuoteCategory = Categories.defaultCategory
               QuoteTime = None
-              NudgesEnabled = None }
+              NudgesEnabled = None
+              HeightCm = None }
 
         saveAll (Array.append users [| fresh |])
         Logger.info (sprintf "New user registered: %s (id %.0f)" firstName id)
@@ -57,6 +58,9 @@ let setQuoteTime (id: float) (time: string option) =
 
 let setNudges (id: float) (enabled: bool) =
     update id (fun u -> { u with NudgesEnabled = Some enabled })
+
+let setHeight (id: float) (cm: float) =
+    update id (fun u -> { u with HeightCm = Some cm })
 
 /// Nudges default ON — only an explicit "off" disables them.
 let nudgesOn (user: Models.User.UserProfile) = user.NudgesEnabled <> Some false

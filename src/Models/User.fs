@@ -10,7 +10,8 @@ type UserProfile =
       Username: string option
       QuoteCategory: string
       QuoteTime: string option // "HH:mm" 24h server-local, None = off
-      NudgesEnabled: bool option } // habit nudges; None = default ON
+      NudgesEnabled: bool option // habit nudges; None = default ON
+      HeightCm: float option } // for BMI; set via /height
 
 module Categories =
     let all =
