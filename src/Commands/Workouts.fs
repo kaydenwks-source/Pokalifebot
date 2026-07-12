@@ -57,11 +57,21 @@ let private logWorkout (config: Env.AppConfig) (user: UserProfile) (description:
                         else
                             None
 
+            // Show the day's energy picture when it's meaningful.
+            let energy = Energy.summary user entry.Date
+
+            let energyLine =
+                if user.DailyKcalTarget.IsSome || energy.Eaten > 0 then
+                    Some("🔋 " + Energy.describe energy)
+                else
+                    None
+
             let lines =
                 [ Some(sprintf "🏋️ Logged: %s" entry.Exercise)
                   (let d = details entry in if d = "" then None else Some d)
                   Some(sprintf "~%d kcal burned" entry.CaloriesBurned)
-                  prLine ]
+                  prLine
+                  energyLine ]
                 |> List.choose id
 
             return! ctx.reply (String.concat "\n" lines)

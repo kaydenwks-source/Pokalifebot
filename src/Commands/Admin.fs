@@ -29,7 +29,8 @@ let handle (config: Env.AppConfig) (ctx: Context) =
           sprintf "Tasks: %d" (Tasks.getAll () |> Array.length)
           sprintf "Meals: %d" (Meals.getAll () |> Array.length)
           sprintf "Weight logs: %d" (WeightLogs.getAll () |> Array.length)
-          sprintf "Workouts: %d" (Workouts.getAll () |> Array.length) ]
+          sprintf "Workouts: %d" (Workouts.getAll () |> Array.length)
+          sprintf "Busy blocks: %d" (Commitments.getAll () |> Array.length) ]
         |> String.concat "\n"
         |> ctx.reply
     | Some from, _ ->

@@ -6,6 +6,7 @@ open Fable.Core
 open Models.User
 open Models.Task
 open Models.Habit
+open Models.Commitment
 open Config
 open Utils
 
@@ -29,24 +30,37 @@ let plan
     (user: UserProfile)
     (tasks: TaskItem[])
     (pendingHabits: Habit[])
+    (busyToday: Commitment[])
     (bedtime: string)
     : JS.Promise<Result<string, string>> =
     let fixedTasks, flexibleTasks = tasks |> Array.partition (fun t -> t.At.IsSome)
 
+    let fixedItems =
+        [ yield!
+              fixedTasks
+              |> Array.map (fun t ->
+                  let span =
+                      match t.At, t.Until with
+                      | Some a, Some u -> sprintf "%s-%s" a u
+                      | Some a, None -> a
+                      | _ -> "?"
+
+                  sprintf "[at %s] %s" span t.Text)
+          yield!
+              busyToday
+              |> Array.map (fun c ->
+                  let span =
+                      match c.Until with
+                      | Some u -> sprintf "%s-%s" c.At u
+                      | None -> c.At
+
+                  sprintf "[at %s] %s (recurring)" span c.Name) ]
+
     let fixedList =
-        if fixedTasks.Length = 0 then
+        if fixedItems.IsEmpty then
             "none"
         else
-            fixedTasks
-            |> Array.map (fun t ->
-                let span =
-                    match t.At, t.Until with
-                    | Some a, Some u -> sprintf "%s-%s" a u
-                    | Some a, None -> a
-                    | _ -> "?"
-
-                sprintf "[at %s] %s" span t.Text)
-            |> String.concat "; "
+            String.concat "; " fixedItems
 
     let taskList =
         if flexibleTasks.Length = 0 then

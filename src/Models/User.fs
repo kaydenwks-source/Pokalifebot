@@ -11,7 +11,10 @@ type UserProfile =
       QuoteCategory: string
       QuoteTime: string option // "HH:mm" 24h server-local, None = off
       NudgesEnabled: bool option // habit nudges; None = default ON
-      HeightCm: float option } // for BMI; set via /height
+      HeightCm: float option // for BMI; set via /height
+      TargetWeightKg: float option // weight goal; set via /target
+      TargetDate: string option // "yyyy-MM-dd" goal deadline
+      DailyKcalTarget: float option } // computed calorie target
 
 module Categories =
     let all =

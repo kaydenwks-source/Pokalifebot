@@ -56,6 +56,7 @@ let private helpText =
       ""
       "📝 Planner"
       "/task add <text> [!high|!low] [@14:00-15:30] — add a task; /task done <n>"
+      "/busy add sunday 10:00-12:00 church — recurring blocks /plan respects"
       "/tasks — open tasks · /today — day at a glance · /plan — AI schedule"
       ""
       "🍽 Calories"
@@ -64,6 +65,7 @@ let private helpText =
       ""
       "⚖️ Body"
       "/weight 72.5 — log weight · /bodyfat 18.5 · /height 175"
+      "/target 68 in 10 weeks — goal + daily calorie target"
       "/progress — trends, BMI and AI analysis"
       ""
       "🏋️ Workouts"
@@ -101,4 +103,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 9 (exercise tracker)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 9.5 (targets & busy blocks)" Env.Version)

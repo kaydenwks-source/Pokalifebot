@@ -185,15 +185,41 @@ let handleToday (ctx: Context) : JS.Promise<obj> =
                     (workouts |> Array.map (fun w -> w.Exercise) |> String.concat ", ")
                     (workouts |> Array.sumBy (fun w -> w.CaloriesBurned))
 
-        [ sprintf "📅 Today — %s %s" (Time.dayName now) todayStr
-          ""
-          habitsLine
-          tasksLine
-          remindersLine
-          sleepLine
-          workoutLine
-          ""
-          "Want a schedule? /plan" ]
+        let busyLine =
+            let blocks = Commitments.forToday user.Id
+
+            if blocks.Length = 0 then
+                None
+            else
+                blocks
+                |> Array.map (fun c ->
+                    match c.Until with
+                    | Some u -> sprintf "%s–%s %s" c.At u c.Name
+                    | None -> sprintf "%s %s" c.At c.Name)
+                |> String.concat " · "
+                |> sprintf "📌 Busy: %s"
+                |> Some
+
+        let energyLine =
+            let e = Energy.summary user todayStr
+
+            if e.Target.IsSome || e.Eaten > 0 || e.Burned > 0 then
+                Some("🔋 " + Energy.describe e)
+            else
+                None
+
+        [ Some(sprintf "📅 Today — %s %s" (Time.dayName now) todayStr)
+          Some ""
+          busyLine
+          Some habitsLine
+          Some tasksLine
+          Some remindersLine
+          Some sleepLine
+          Some workoutLine
+          energyLine
+          Some ""
+          Some "Want a schedule? /plan" ]
+        |> List.choose id
         |> String.concat "\n"
         |> ctx.reply
 
@@ -205,8 +231,9 @@ let handlePlan (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
         | Some user ->
             let tasks = Tasks.openFor user.Id
             let pending = pendingHabits user.Id
+            let busyToday = Commitments.forToday user.Id
 
-            if tasks.Length = 0 && pending.Length = 0 then
+            if tasks.Length = 0 && pending.Length = 0 && busyToday.Length = 0 then
                 return!
                     ctx.reply
                         "Nothing to plan — everything's done! Add a task (/task add finish essay !high) if something's on your mind."
@@ -221,7 +248,7 @@ let handlePlan (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
                     |> Option.map (fun l -> l.BedTime)
                     |> Option.defaultValue "23:30"
 
-                let! result = Ai.Planner.plan config user tasks pending bedtime
+                let! result = Ai.Planner.plan config user tasks pending busyToday bedtime
 
                 match result with
                 | Ok text -> return! ctx.reply ("📅 Your plan for the rest of today:\n\n" + text.Trim())

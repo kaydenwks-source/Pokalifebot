@@ -39,7 +39,10 @@ let upsert (id: float) (chatId: float) (firstName: string) (username: string opt
               QuoteCategory = Categories.defaultCategory
               QuoteTime = None
               NudgesEnabled = None
-              HeightCm = None }
+              HeightCm = None
+              TargetWeightKg = None
+              TargetDate = None
+              DailyKcalTarget = None }
 
         saveAll (Array.append users [| fresh |])
         Logger.info (sprintf "New user registered: %s (id %.0f)" firstName id)
@@ -61,6 +64,20 @@ let setNudges (id: float) (enabled: bool) =
 
 let setHeight (id: float) (cm: float) =
     update id (fun u -> { u with HeightCm = Some cm })
+
+let setTarget (id: float) (kg: float) (date: string) (dailyKcal: float) =
+    update id (fun u ->
+        { u with
+            TargetWeightKg = Some kg
+            TargetDate = Some date
+            DailyKcalTarget = Some dailyKcal })
+
+let clearTarget (id: float) =
+    update id (fun u ->
+        { u with
+            TargetWeightKg = None
+            TargetDate = None
+            DailyKcalTarget = None })
 
 /// Nudges default ON — only an explicit "off" disables them.
 let nudgesOn (user: Models.User.UserProfile) = user.NudgesEnabled <> Some false

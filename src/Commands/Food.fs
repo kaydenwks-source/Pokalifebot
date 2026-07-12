@@ -24,17 +24,13 @@ let private usage =
 
 let private grams (g: float) = sprintf "%.0fg" g
 
-let private mealText (m: Meal) (totals: Meals.DayTotals) =
+let private mealText (m: Meal) (energy: Energy.DaySummary) =
     [ sprintf "🍽 Logged: %s" m.Name
       sprintf "Calories: %d kcal" m.Calories
       sprintf "Protein %s · Carbs %s · Fat %s" (grams m.Protein) (grams m.Carbs) (grams m.Fat)
       sprintf "Sugar %s · Fiber %s" (grams m.Sugar) (grams m.Fiber)
       ""
-      sprintf
-          "Today so far: %d kcal across %d meal%s. /calories for details"
-          totals.Calories
-          totals.Meals
-          (if totals.Meals = 1 then "" else "s") ]
+      "🔋 " + Energy.describe energy ]
     |> String.concat "\n"
 
 let handleFood (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
@@ -57,9 +53,8 @@ let handleFood (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
                 match result with
                 | Ok nutrition ->
                     let meal = Meals.add user.Id nutrition
-                    let totals = Meals.totalsOn user.Id meal.Date
                     Logger.info (sprintf "%s logged meal: %s (%d kcal)" user.FirstName meal.Name meal.Calories)
-                    return! ctx.reply (mealText meal totals)
+                    return! ctx.reply (mealText meal (Energy.summary user meal.Date))
                 | Error err ->
                     Logger.warn (sprintf "Food analysis failed for %s: %s" user.FirstName err)
 
@@ -86,9 +81,11 @@ let private showToday (user: UserProfile) (ctx: Context) =
           ""
           lines
           ""
-          sprintf "Total: %d kcal" t.Calories
+          sprintf "Total eaten: %d kcal" t.Calories
           sprintf "Protein %s · Carbs %s · Fat %s" (grams t.Protein) (grams t.Carbs) (grams t.Fat)
-          sprintf "Sugar %s · Fiber %s" (grams t.Sugar) (grams t.Fiber) ]
+          sprintf "Sugar %s · Fiber %s" (grams t.Sugar) (grams t.Fiber)
+          ""
+          "🔋 " + Energy.describe (Energy.summary user today) ]
         |> String.concat "\n"
         |> ctx.reply
 
@@ -212,10 +209,13 @@ let handlePhoto (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
                             match result with
                             | Ok nutrition ->
                                 let meal = Meals.add user.Id nutrition
-                                let totals = Meals.totalsOn user.Id meal.Date
 
                                 return!
-                                    ctx.reply (mealText meal totals + "\n\n📸 What I saw: " + description)
+                                    ctx.reply (
+                                        mealText meal (Energy.summary user meal.Date)
+                                        + "\n\n📸 What I saw: "
+                                        + description
+                                    )
                             | Error err ->
                                 Logger.warn ("Food analysis of photo description failed: " + err)
 

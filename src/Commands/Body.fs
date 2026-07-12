@@ -16,6 +16,7 @@ let private usage =
       "/weight — latest weight and trend"
       "/bodyfat 18.5 — log today's body fat %"
       "/height 175 — set your height (cm) so I can compute BMI"
+      "/target 68 in 10 weeks — weight goal + daily calorie target"
       "/progress — trends + AI analysis" ]
     |> String.concat "\n"
 
@@ -57,12 +58,29 @@ let handleWeight (ctx: Context) : JS.Promise<obj> =
                 WeightLogs.upsertToday user.Id (Weight kg) |> ignore
                 Logger.info (sprintf "%s logged weight %.1f kg" user.FirstName kg)
 
+                let targetLine =
+                    match user.TargetWeightKg with
+                    | Some target when abs (kg - target) <= 0.2 ->
+                        Some "🎉 You've hit your goal weight! Set a new one with /target, or /target off"
+                    | Some target ->
+                        Some(
+                            sprintf
+                                "🎯 %.1f kg to go (goal %.1f%s)"
+                                (abs (kg - target))
+                                target
+                                (user.TargetDate
+                                 |> Option.map (sprintf " by %s")
+                                 |> Option.defaultValue "")
+                        )
+                    | None -> Some "🎯 Want a goal? /target 68 in 10 weeks — I'll compute your daily calories"
+
                 let lines =
                     [ Some(sprintf "⚖️ Logged: %.1f kg" kg)
                       deltaText "vs 7 days ago" (WeightLogs.weightDelta user.Id 7)
                       match user.HeightCm with
                       | Some h -> Some(sprintf "BMI: %.1f" (WeightLogs.bmi h kg))
-                      | None -> Some "(Set /height 175 once and I'll compute your BMI)" ]
+                      | None -> Some "(Set /height 175 once and I'll compute your BMI)"
+                      targetLine ]
                     |> List.choose id
 
                 ctx.reply (String.concat "\n" lines)
@@ -103,6 +121,97 @@ let handleHeight (ctx: Context) : JS.Promise<obj> =
                 |> Option.defaultValue "No height set yet."
 
             ctx.reply (current + "\nUsage: /height 175")
+
+/// /target <kg> in <N> weeks|months — weight goal -> daily calorie target.
+let handleTarget (ctx: Context) : JS.Promise<obj> =
+    match Common.ensureUser ctx with
+    | None -> ctx.reply "Sorry, I couldn't identify you — please try again."
+    | Some user ->
+        match Common.commandArg ctx with
+        | None ->
+            match user.TargetWeightKg, user.TargetDate, user.DailyKcalTarget with
+            | Some kg, Some date, Some kcal ->
+                let current =
+                    WeightLogs.weightDelta user.Id 0
+                    |> Option.map (fun (c, _) -> sprintf "\nCurrent: %.1f kg (%.1f kg to go)" c (abs (c - kg)))
+                    |> Option.defaultValue ""
+
+                ctx.reply (
+                    sprintf
+                        "🎯 Goal: %.1f kg by %s · daily target ~%.0f kcal%s\n\nChange it: /target 68 in 10 weeks · stop: /target off"
+                        kg
+                        date
+                        kcal
+                        current
+                )
+            | _ ->
+                ctx.reply
+                    "No goal set yet. Try: /target 68 in 10 weeks\nI'll work out the daily calories to get you there."
+        | Some arg when arg.Trim().ToLowerInvariant() = "off" ->
+            Users.clearTarget user.Id
+            Logger.info (sprintf "%s cleared weight target" user.FirstName)
+            ctx.reply "🎯 Goal cleared — /calories is back to plain tracking."
+        | Some arg ->
+            let tokens = arg.Split(' ') |> Array.filter (fun t -> t.Trim() <> "")
+
+            let numbers =
+                tokens
+                |> Array.choose (fun t ->
+                    match System.Double.TryParse (t.Trim().ToLowerInvariant().Replace("kg", "")) with
+                    | true, v -> Some v
+                    | _ -> None)
+
+            let inMonths =
+                tokens |> Array.exists (fun t -> t.ToLowerInvariant().StartsWith "month")
+
+            if numbers.Length = 0 then
+                ctx.reply "Tell me the goal like: /target 68 in 10 weeks (or: /target 68 in 3 months)"
+            else
+                let targetKg = numbers.[0]
+
+                let weeks =
+                    let count = if numbers.Length > 1 then numbers.[1] else 12.0
+                    let w = if inMonths then count * 4.345 else count
+                    w |> max 2.0 |> min 104.0
+
+                if targetKg < 20.0 || targetKg > 400.0 then
+                    ctx.reply "That target doesn't look like a weight in kg — e.g. /target 68 in 10 weeks"
+                else
+                    match WeightLogs.weightDelta user.Id 0 with
+                    | None -> ctx.reply "Log your current weight first (/weight 72.5), then set the goal."
+                    | Some (current, _) ->
+                        let plan = Energy.computeTarget current targetKg weeks
+
+                        let targetDate =
+                            System.DateTime.Now.AddDays(weeks * 7.0).ToString("yyyy-MM-dd")
+
+                        Users.setTarget user.Id targetKg targetDate plan.DailyTargetKcal
+
+                        Logger.info (
+                            sprintf "%s set target %.1f kg in %.0f weeks (%.0f kcal/day)" user.FirstName targetKg weeks plan.DailyTargetKcal
+                        )
+
+                        let warnings =
+                            [ if plan.Aggressive then
+                                  Some "⚠️ That pace is faster than ~0.75 kg/week — a longer timeline is usually easier to keep."
+                              else
+                                  None
+                              if plan.Floored then
+                                  Some "⚠️ I've floored the target at 1200 kcal/day — going lower isn't sustainable."
+                              else
+                                  None ]
+                            |> List.choose id
+
+                        [ sprintf "🎯 Goal set: %.1f kg by %s (%.0f weeks)" targetKg targetDate weeks
+                          sprintf "Current %.1f kg → %+.1f kg (%+.2f kg/week)" current (targetKg - current) plan.WeeklyChangeKg
+                          sprintf "Estimated maintenance: ~%.0f kcal/day" plan.MaintenanceKcal
+                          sprintf "Your daily target: ~%.0f kcal" plan.DailyTargetKcal
+                          yield! warnings
+                          ""
+                          "/calories now tracks net intake against this (workouts add headroom)."
+                          "Estimates only, not medical advice. /target off to stop." ]
+                        |> String.concat "\n"
+                        |> ctx.reply
 
 let handleProgress (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
     promise {
