@@ -16,7 +16,7 @@ type Kind =
     | Evening
 
 let private habitLine (h: Habit) =
-    let s = Habits.streaksFor h.Cadence h.Completions
+    let s = Habits.streaksForHabit h
 
     if s.Current > 0 then
         sprintf "⬜ %s — 🔥 %d on the line" h.Name s.Current
@@ -26,7 +26,7 @@ let private habitLine (h: Habit) =
 let private messageFor (kind: Kind) (firstName: string) (habits: Habit[]) : string option =
     let pending =
         habits
-        |> Array.filter (fun h -> not (Habits.streaksFor h.Cadence h.Completions).DoneThisPeriod)
+        |> Array.filter (fun h -> not (Habits.streaksForHabit h).DoneThisPeriod)
 
     if pending.Length > 0 then
         let lines = pending |> Array.map habitLine |> String.concat "\n"

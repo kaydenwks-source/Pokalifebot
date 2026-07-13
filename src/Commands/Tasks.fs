@@ -128,7 +128,7 @@ let handleTasks (ctx: Context) : JS.Promise<obj> =
 
 let private pendingHabits (userId: float) =
     Habits.forUser userId
-    |> Array.filter (fun h -> not (Habits.streaksFor h.Cadence h.Completions).DoneThisPeriod)
+    |> Array.filter (fun h -> not (Habits.streaksForHabit h).DoneThisPeriod)
 
 /// /today — cross-feature dashboard: habits, tasks, reminders, sleep.
 let handleToday (ctx: Context) : JS.Promise<obj> =

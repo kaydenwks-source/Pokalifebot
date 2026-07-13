@@ -14,12 +14,12 @@ let private badgesFor (userId: float) : Badge[] =
     let habits = Habits.forUser userId
 
     let maxStreak =
-        let streaks = habits |> Array.map (fun h -> (Habits.streaksFor h.Cadence h.Completions).Current)
+        let streaks = habits |> Array.map (fun h -> (Habits.streaksForHabit h).Current)
         if streaks.Length = 0 then 0 else Array.max streaks
 
     let allHabitsDone =
         habits.Length > 0
-        && habits |> Array.forall (fun h -> (Habits.streaksFor h.Cadence h.Completions).DoneThisPeriod)
+        && habits |> Array.forall (fun h -> (Habits.streaksForHabit h).DoneThisPeriod)
 
     let workouts = Workouts.forUser userId |> Array.length
     let meals = Meals.getAll () |> Array.filter (fun m -> m.UserId = userId) |> Array.length
@@ -73,11 +73,20 @@ let handle (ctx: Context) : JS.Promise<obj> =
             else
                 "" :: "🔒 Next up:" :: (locked |> Array.toList |> List.map (fun b -> sprintf "  %s (%s)" b.Label b.Hint))
 
+        let freezeReady = user.FreezeWeek <> Some(Habits.currentWeekIndex ())
+
+        let freezeLine =
+            if freezeReady then
+                "🧊 Streak freeze: ready (auto-protects one missed period this week)"
+            else
+                "🧊 Streak freeze: used this week — refreshes Monday"
+
         ([ sprintf "🎮 %s's progress" user.FirstName
            ""
            sprintf "Level %d — %s" (lvl.Index + 1) lvl.Name
            sprintf "XP: %d" xp
            progress
+           freezeLine
            "" ]
          @ earnedBlock
          @ lockedBlock)

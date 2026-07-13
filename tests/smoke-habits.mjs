@@ -46,7 +46,8 @@ console.log('markDone:', r1.tag === 0 && r1.fields[1].Current === 1 ? 'PASS (str
 
 const habit2 = svc.tryFind(FAKE, 'Test Gym');
 const r2 = svc.markDone(habit2);
-console.log('second markDone same day:', r2.tag === 1 ? 'PASS (AlreadyDone)' : 'FAIL');
+// DoneResult tags: Marked=0, MarkedWithFreeze=1, AlreadyDone=2
+console.log('second markDone same day:', r2.tag === 2 ? 'PASS (AlreadyDone)' : 'FAIL');
 
 // Clean up the fake user.
 const remaining = svc.getAll().filter((h) => h.UserId !== FAKE);

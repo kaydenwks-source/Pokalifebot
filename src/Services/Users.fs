@@ -45,7 +45,8 @@ let upsert (id: float) (chatId: float) (firstName: string) (username: string opt
               DailyKcalTarget = None
               TzOffsetMinutes = None
               NudgeMorning = None
-              NudgeEvening = None }
+              NudgeEvening = None
+              FreezeWeek = None }
 
         saveAll (Array.append users [| fresh |])
         Logger.info (sprintf "New user registered: %s (id %.0f)" firstName id)
@@ -90,6 +91,10 @@ let setNudgeMorning (id: float) (time: string) =
 
 let setNudgeEvening (id: float) (time: string) =
     update id (fun u -> { u with NudgeEvening = Some time })
+
+/// Record that a streak-freeze was used in the given ISO-week index.
+let useFreeze (id: float) (weekIndex: int) =
+    update id (fun u -> { u with FreezeWeek = Some weekIndex })
 
 /// Nudges default ON — only an explicit "off" disables them.
 let nudgesOn (user: Models.User.UserProfile) = user.NudgesEnabled <> Some false

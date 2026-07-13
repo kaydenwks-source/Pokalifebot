@@ -63,6 +63,8 @@ let handle (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
                             | Habits.AlreadyDone s ->
                                 return! ctx.reply (sprintf "✅ \"%s\" was already done this period — 🔥 %d. Nice." h.Name s.Current)
                             | Habits.Marked(_, s) -> return! ctx.reply (sprintf "✅ Done: %s — 🔥 %d streak!" h.Name s.Current)
+                            | Habits.MarkedWithFreeze(_, s) ->
+                                return! ctx.reply (sprintf "🧊 Used your weekly streak freeze — ✅ %s, 🔥 %d streak safe!" h.Name s.Current)
 
                     | Ai.Router.Food _ ->
                         let! result = Ai.FoodAnalyzer.analyse config text

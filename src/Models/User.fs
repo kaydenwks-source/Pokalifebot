@@ -17,7 +17,8 @@ type UserProfile =
       DailyKcalTarget: float option // computed calorie target
       TzOffsetMinutes: float option // minutes from UTC; None = server time
       NudgeMorning: string option // "HH:mm", default 08:00
-      NudgeEvening: string option } // "HH:mm", default 19:00
+      NudgeEvening: string option // "HH:mm", default 19:00
+      FreezeWeek: int option } // ISO-week index a streak-freeze was last used; None = never
 
 module Categories =
     let all =

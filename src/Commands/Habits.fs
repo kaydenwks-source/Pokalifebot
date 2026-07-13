@@ -43,7 +43,7 @@ let private showList (user: UserProfile) (ctx: Context) =
         let lines =
             mine
             |> Array.mapi (fun i h ->
-                let s = Habits.streaksFor h.Cadence h.Completions
+                let s = Habits.streaksForHabit h
                 let mark = if s.DoneThisPeriod then "✅" else "⬜"
                 sprintf "%d. %s %s (%s) — 🔥 %d" (i + 1) mark h.Name h.Cadence s.Current)
             |> String.concat "\n"
@@ -96,6 +96,47 @@ let private checkOff
                     sprintf "I couldn't find a habit called \"%s\" — check /habit list" (arg.Trim())
                 )
         | Some habit ->
+            // Shared reply for both a normal check-off and a freeze-protected
+            // one; froze prepends a heads-up that a token was spent.
+            let respond (h: Habit) (s: Habits.Streaks) (froze: bool) : JS.Promise<obj> =
+                promise {
+                    Logger.info (sprintf "%s checked off %s (streak %d)" user.FirstName h.Name s.Current)
+
+                    let record =
+                        if s.Current >= 3 && s.Current = s.Longest then
+                            " New personal best! 🏆"
+                        else
+                            ""
+
+                    let freezeLine =
+                        if froze then
+                            "🧊 Used your weekly streak freeze — the missed day is covered!\n\n"
+                        else
+                            ""
+
+                    let baseMsg =
+                        freezeLine
+                        + sprintf
+                            "✅ %s done! 🔥 Streak: %d %s.%s"
+                            h.Name
+                            s.Current
+                            (Cadence.streakUnit h.Cadence s.Current)
+                            record
+
+                    if Ai.Encourage.milestone s.Current then
+                        ctx.sendChatAction "typing" |> ignore
+                        let! encouragement = Ai.Encourage.generate config h.Name h.Cadence s.Current
+
+                        let extra =
+                            match encouragement with
+                            | Ok text -> "\n\n" + text.Trim()
+                            | Error _ -> ""
+
+                        return! ctx.reply (baseMsg + extra)
+                    else
+                        return! ctx.reply baseMsg
+                }
+
             match Habits.markDone habit with
             | Habits.AlreadyDone s ->
                 return!
@@ -105,35 +146,8 @@ let private checkOff
                             (Cadence.periodPhrase habit.Cadence)
                             s.Current
                     )
-            | Habits.Marked (h, s) ->
-                Logger.info (sprintf "%s checked off %s (streak %d)" user.FirstName h.Name s.Current)
-
-                let record =
-                    if s.Current >= 3 && s.Current = s.Longest then
-                        " New personal best! 🏆"
-                    else
-                        ""
-
-                let baseMsg =
-                    sprintf
-                        "✅ %s done! 🔥 Streak: %d %s.%s"
-                        h.Name
-                        s.Current
-                        (Cadence.streakUnit h.Cadence s.Current)
-                        record
-
-                if Ai.Encourage.milestone s.Current then
-                    ctx.sendChatAction "typing" |> ignore
-                    let! encouragement = Ai.Encourage.generate config h.Name h.Cadence s.Current
-
-                    let extra =
-                        match encouragement with
-                        | Ok text -> "\n\n" + text.Trim()
-                        | Error _ -> ""
-
-                    return! ctx.reply (baseMsg + extra)
-                else
-                    return! ctx.reply baseMsg
+            | Habits.Marked(h, s) -> return! respond h s false
+            | Habits.MarkedWithFreeze(h, s) -> return! respond h s true
     }
 
 let private showStats (user: UserProfile) (ctx: Context) =
@@ -143,7 +157,7 @@ let private showStats (user: UserProfile) (ctx: Context) =
         ctx.reply "No habits yet. Add one: /habit add gym"
     else
         let block (h: Habit) =
-            let s = Habits.streaksFor h.Cadence h.Completions
+            let s = Habits.streaksForHabit h
 
             sprintf
                 "%s (%s)\n  🔥 current %d · 🏆 longest %d · ✅ %d check-ins total"

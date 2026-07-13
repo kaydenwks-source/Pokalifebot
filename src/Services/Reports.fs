@@ -54,7 +54,7 @@ let weeklyData (user: UserProfile) : string =
         else
             habits
             |> Array.map (fun h ->
-                let s = Habits.streaksFor h.Cadence h.Completions
+                let s = Habits.streaksForHabit h
                 let thisWeek = h.Completions |> Array.filter (fun c -> c > cutoff) |> Array.length
                 sprintf "Habit %s (%s): %d check-ins this week, current streak %d" h.Name h.Cadence thisWeek s.Current)
             |> String.concat "\n"
@@ -261,7 +261,7 @@ let monthlyData (user: UserProfile) : string =
         else
             habits
             |> Array.map (fun h ->
-                let s = Habits.streaksFor h.Cadence h.Completions
+                let s = Habits.streaksForHabit h
 
                 let expected =
                     match h.Cadence with

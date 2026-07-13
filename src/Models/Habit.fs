@@ -7,7 +7,10 @@ type Habit =
       Name: string
       Cadence: string // "daily" | "weekly" | "monthly"
       CreatedAt: string // "yyyy-MM-dd"
-      Completions: string[] } // check-in dates "yyyy-MM-dd"
+      Completions: string[] // check-in dates "yyyy-MM-dd"
+      // Periods protected by a spent streak-freeze token, kept SEPARATE from
+      // real check-ins so exports stay honest. None on pre-Phase-23.5 rows.
+      Frozen: string[] option }
 
 module Cadence =
     let all = [ "daily"; "weekly"; "monthly" ]

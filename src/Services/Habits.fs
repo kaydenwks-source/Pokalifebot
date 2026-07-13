@@ -82,6 +82,15 @@ let streaksFor (cadence: string) (completions: string[]) : Streaks =
           Longest = longest
           DoneThisPeriod = doneNow }
 
+/// Streak view that also counts periods protected by a spent freeze token.
+/// Every display path should use this, not raw streaksFor, so freezes show.
+let streaksForHabit (h: Habit) : Streaks =
+    let frozen = h.Frozen |> Option.defaultValue [||]
+    streaksFor h.Cadence (Array.append h.Completions frozen)
+
+/// The current ISO-week index — the freeze allowance resets each week.
+let currentWeekIndex () = periodIndex "weekly" System.DateTime.Now
+
 // ── persistence ─────────────────────────────────────────────────────
 
 let getAll () : Habit[] =
@@ -112,7 +121,8 @@ let add (userId: float) (name: string) (cadence: string) : AddResult =
               Name = name.Trim()
               Cadence = cadence
               CreatedAt = System.DateTime.Now.ToString("yyyy-MM-dd")
-              Completions = [||] }
+              Completions = [||]
+              Frozen = None }
 
         saveAll (Array.append (getAll ()) [| habit |])
         Added habit
@@ -122,20 +132,61 @@ let remove (habit: Habit) =
 
 type DoneResult =
     | Marked of Habit * Streaks
+    | MarkedWithFreeze of Habit * Streaks // a token bridged a single missed period
     | AlreadyDone of Streaks
 
-/// Check a habit off for the current period (idempotent per period).
+/// A date one period before `d`, used to represent a frozen (protected) period.
+let private oneBefore (cadence: string) (d: System.DateTime) =
+    match cadence with
+    | "weekly" -> d.AddDays -7.0
+    | "monthly" -> d.AddMonths -1
+    | _ -> d.AddDays -1.0
+
+/// Check a habit off for the current period (idempotent per period). If the
+/// user completed right up to a single missed period, a weekly freeze token
+/// is spent automatically to protect the streak through that one gap.
 let markDone (habit: Habit) : DoneResult =
-    let before = streaksFor habit.Cadence habit.Completions
+    let before = streaksForHabit habit
 
     if before.DoneThisPeriod then
         AlreadyDone before
     else
-        let today = System.DateTime.Now.ToString("yyyy-MM-dd")
+        let now = System.DateTime.Now
+        let nowP = periodIndex habit.Cadence now
+        let frozen = habit.Frozen |> Option.defaultValue [||]
+
+        let covered =
+            Array.append habit.Completions frozen
+            |> Array.map (fun s -> periodIndex habit.Cadence (System.DateTime.Parse s))
+            |> Set.ofArray
+
+        let maxPrev =
+            let prior = covered |> Set.filter (fun p -> p < nowP)
+            if Set.isEmpty prior then None else Some(Set.maxElement prior)
+
+        let weekIdx = currentWeekIndex ()
+
+        let freezeAvailable =
+            match Users.find habit.UserId with
+            | Some u -> u.FreezeWeek <> Some weekIdx
+            | None -> false
+
+        // Bridge only a single-period gap (the period immediately before now).
+        let habitToSave, usedFreeze =
+            match maxPrev with
+            | Some p when p = nowP - 2 && freezeAvailable ->
+                let repDate = (oneBefore habit.Cadence now).ToString("yyyy-MM-dd")
+                Users.useFreeze habit.UserId weekIdx
+                { habit with Frozen = Some(Array.append frozen [| repDate |]) }, true
+            | _ -> habit, false
+
+        let today = now.ToString("yyyy-MM-dd")
 
         let updated =
-            { habit with Completions = Array.append habit.Completions [| today |] }
+            { habitToSave with Completions = Array.append habitToSave.Completions [| today |] }
 
         saveAll (getAll () |> Array.map (fun h -> if h.Id = habit.Id then updated else h))
         Gamification.award updated.UserId Gamification.Points.Habit
-        Marked(updated, streaksFor updated.Cadence updated.Completions)
+        let after = streaksForHabit updated
+
+        if usedFreeze then MarkedWithFreeze(updated, after) else Marked(updated, after)
