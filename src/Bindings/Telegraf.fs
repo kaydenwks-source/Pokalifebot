@@ -49,6 +49,8 @@ type Context =
     abstract reply: text: string -> JS.Promise<obj>
     abstract reply: text: string * extra: obj -> JS.Promise<obj>
     abstract sendChatAction: action: string -> JS.Promise<obj>
+    /// Send a file. Pass { source: Buffer; filename: string } (+ optional caption).
+    abstract replyWithDocument: document: obj -> JS.Promise<obj>
     /// Dismisses the loading spinner after an inline button press.
     abstract answerCbQuery: unit -> JS.Promise<obj>
     abstract editMessageText: text: string -> JS.Promise<obj>

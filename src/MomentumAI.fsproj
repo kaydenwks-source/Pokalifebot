@@ -41,6 +41,7 @@
     <Compile Include="Services/Analytics.fs" />
     <Compile Include="Services/Usage.fs" />
     <Compile Include="Services/Entitlements.fs" />
+    <Compile Include="Services/UserData.fs" />
     <Compile Include="Ai/DeepSeek.fs" />
     <Compile Include="Ai/Quotes.fs" />
     <Compile Include="Ai/Sleep.fs" />
@@ -76,6 +77,7 @@
     <Compile Include="Scheduler/HabitNudges.fs" />
     <Compile Include="Scheduler/WeeklyReports.fs" />
     <Compile Include="Scheduler/MonthlyReports.fs" />
+    <Compile Include="Scheduler/Backups.fs" />
     <Compile Include="Bot.fs" />
     <Compile Include="Index.fs" />
   </ItemGroup>

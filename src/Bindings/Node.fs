@@ -14,6 +14,7 @@ type IFs =
     abstract readFileSync: path: string * encoding: string -> string
     abstract writeFileSync: path: string * data: string -> unit
     abstract readdirSync: path: string -> string[]
+    abstract unlinkSync: path: string -> unit
 
 [<ImportAll("node:fs")>]
 let fs: IFs = jsNative
@@ -27,6 +28,10 @@ type IProcess =
 
 [<Global("process")>]
 let nodeProcess: IProcess = jsNative
+
+/// A UTF-8 Buffer from a string — for sending generated files to Telegram.
+[<Emit("Buffer.from($0, 'utf8')")>]
+let bufferFrom (s: string) : obj = jsNative
 
 [<Emit("process.env[$0]")>]
 let private envRaw (name: string) : string = jsNative
