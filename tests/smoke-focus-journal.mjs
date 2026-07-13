@@ -3,13 +3,12 @@
 //   node --disable-warning=ExperimentalWarning tests/smoke-focus-journal.mjs
 // Exercises the pure service logic (no live timer) with a throwaway user,
 // checks XP hooks + report integration, then self-cleans.
-import fs from 'node:fs';
-
 const Users = await import('../dist/Services/Users.js');
 const Focus = await import('../dist/Services/Focus.js');
 const Refl = await import('../dist/Services/Reflections.js');
 const Game = await import('../dist/Services/Gamification.js');
 const Reports = await import('../dist/Services/Reports.js');
+const UD = await import('../dist/Services/UserData.js');
 
 const FAKE = 999999;
 let failures = 0;
@@ -62,18 +61,8 @@ check('weeklyData mentions Mood', /Mood: 1 check-ins, average 4\.0/.test(weekly)
 check('weeklyData mentions Journal', /Journal: 1 entries/.test(weekly));
 
 // ── Cleanup ───────────────────────────────────────────────────────────
-for (const path of [
-  'database/users.json',
-  'database/xp.json',
-  'database/focus.json',
-  'database/journal.json',
-]) {
-  if (fs.existsSync(path)) {
-    const rows = JSON.parse(fs.readFileSync(path, 'utf8'));
-    const key = path.includes('users') ? 'Id' : 'UserId';
-    fs.writeFileSync(path, JSON.stringify(rows.filter((r) => r[key] !== FAKE), null, 2));
-  }
-}
+// Storage is SQLite since Phase 15 — wipe through UserData, not the .json backups.
+UD.wipe(FAKE);
 console.log('cleanup: removed test user 999999');
 
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURE(S)`);

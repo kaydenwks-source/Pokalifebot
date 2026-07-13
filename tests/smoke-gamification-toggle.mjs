@@ -2,11 +2,10 @@
 // Run from project root AFTER `npm run build`:
 //   node --disable-warning=ExperimentalWarning tests/smoke-gamification-toggle.mjs
 // Verifies Gamification.award respects the user's GamificationEnabled flag,
-// then cleans up the throwaway user from users.json and xp.json.
-import fs from 'node:fs';
-
+// then wipes the throwaway user through Storage (SQLite).
 const Users = await import('../dist/Services/Users.js');
 const Game = await import('../dist/Services/Gamification.js');
+const UD = await import('../dist/Services/UserData.js');
 
 const FAKE = 999999;
 let failures = 0;
@@ -31,14 +30,8 @@ Users.setGamification(FAKE, true);
 Game.award(FAKE, 10);
 check('back ON awards again (+10)', Game.xpFor(FAKE) === frozen + 10);
 
-// Cleanup: drop the throwaway user from both files.
-for (const path of ['database/users.json', 'database/xp.json']) {
-  if (fs.existsSync(path)) {
-    const rows = JSON.parse(fs.readFileSync(path, 'utf8'));
-    const key = path.includes('users') ? 'Id' : 'UserId';
-    fs.writeFileSync(path, JSON.stringify(rows.filter((r) => r[key] !== FAKE), null, 2));
-  }
-}
+// Cleanup: storage is SQLite since Phase 15, so wipe through UserData.
+UD.wipe(FAKE);
 console.log('cleanup: removed test user 999999');
 
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURE(S)`);

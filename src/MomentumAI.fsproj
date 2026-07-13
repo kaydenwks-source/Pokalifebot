@@ -63,6 +63,7 @@
     <Compile Include="Ai/Router.fs" />
     <Compile Include="Commands/Common.fs" />
     <Compile Include="Commands/Basic.fs" />
+    <Compile Include="Commands/Onboarding.fs" />
     <Compile Include="Commands/Quotes.fs" />
     <Compile Include="Commands/Sleep.fs" />
     <Compile Include="Commands/Reminders.fs" />

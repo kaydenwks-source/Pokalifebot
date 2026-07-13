@@ -26,8 +26,13 @@ let create (config: Env.AppConfig) : Telegraf =
             next ())
     )
 
-    bot.start Commands.Basic.handleStart
+    // Phase 21 — /start runs guided onboarding for fresh users, else the
+    // normal welcome. Skip buttons advance the wizard.
+    bot.start Commands.Onboarding.handleStart
     bot.help Commands.Basic.handleHelp
+
+    for step in [ 1; 2; 3 ] do
+        bot.action ("onb:skip:" + string step, Commands.Onboarding.handleSkip step)
     bot.command ("ping", Commands.Basic.handlePing)
     bot.command ("version", Commands.Basic.handleVersion)
 

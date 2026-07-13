@@ -19,7 +19,9 @@ type UserProfile =
       NudgeMorning: string option // "HH:mm", default 08:00
       NudgeEvening: string option // "HH:mm", default 19:00
       FreezeWeek: int option // ISO-week index a streak-freeze was last used; None = never
-      GamificationEnabled: bool option } // XP/levels/badges; None = default ON
+      GamificationEnabled: bool option // XP/levels/badges; None = default ON
+      OnboardingStep: int option // the setup step awaiting a reply; None = not mid-onboarding
+      OnboardingDone: bool option } // Some true once first-run setup finished
 
 module Categories =
     let all =

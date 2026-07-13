@@ -47,7 +47,9 @@ let upsert (id: float) (chatId: float) (firstName: string) (username: string opt
               NudgeMorning = None
               NudgeEvening = None
               FreezeWeek = None
-              GamificationEnabled = None }
+              GamificationEnabled = None
+              OnboardingStep = None
+              OnboardingDone = None }
 
         saveAll (Array.append users [| fresh |])
         Logger.info (sprintf "New user registered: %s (id %.0f)" firstName id)
@@ -105,6 +107,16 @@ let setGamification (id: float) (enabled: bool) =
 
 /// Gamification defaults ON — only an explicit "off" disables XP/levels/badges.
 let gamificationOn (user: Models.User.UserProfile) = user.GamificationEnabled <> Some false
+
+let setOnboardingStep (id: float) (step: int option) =
+    update id (fun u -> { u with OnboardingStep = step })
+
+/// First-run setup finished: clear the step and mark it done for good.
+let completeOnboarding (id: float) =
+    update id (fun u ->
+        { u with
+            OnboardingStep = None
+            OnboardingDone = Some true })
 
 /// Users who opted into the daily scheduled quote.
 let withDailyQuote () : UserProfile[] =
