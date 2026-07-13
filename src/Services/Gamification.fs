@@ -36,11 +36,18 @@ let xpFor (userId: float) : int =
 /// the underlying log the user actually cares about.
 let award (userId: float) (amount: int) : unit =
     try
-        let all = getAll ()
+        // Respect the user's opt-out (defaults ON). One gate here covers every
+        // earn site — habits, workouts, tasks, meals, sleep, goals.
+        let enabled =
+            Users.find userId
+            |> Option.forall (fun u -> u.GamificationEnabled <> Some false)
 
-        match all |> Array.tryFind (fun r -> r.UserId = userId) with
-        | Some _ -> saveAll (all |> Array.map (fun x -> if x.UserId = userId then { x with Xp = x.Xp + amount } else x))
-        | None -> saveAll (Array.append all [| { UserId = userId; Xp = amount } |])
+        if enabled then
+            let all = getAll ()
+
+            match all |> Array.tryFind (fun r -> r.UserId = userId) with
+            | Some _ -> saveAll (all |> Array.map (fun x -> if x.UserId = userId then { x with Xp = x.Xp + amount } else x))
+            | None -> saveAll (Array.append all [| { UserId = userId; Xp = amount } |])
     with ex ->
         Logger.error (sprintf "Gamification.award failed: %s" ex.Message)
 

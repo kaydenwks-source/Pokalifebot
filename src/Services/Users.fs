@@ -46,7 +46,8 @@ let upsert (id: float) (chatId: float) (firstName: string) (username: string opt
               TzOffsetMinutes = None
               NudgeMorning = None
               NudgeEvening = None
-              FreezeWeek = None }
+              FreezeWeek = None
+              GamificationEnabled = None }
 
         saveAll (Array.append users [| fresh |])
         Logger.info (sprintf "New user registered: %s (id %.0f)" firstName id)
@@ -98,6 +99,12 @@ let useFreeze (id: float) (weekIndex: int) =
 
 /// Nudges default ON — only an explicit "off" disables them.
 let nudgesOn (user: Models.User.UserProfile) = user.NudgesEnabled <> Some false
+
+let setGamification (id: float) (enabled: bool) =
+    update id (fun u -> { u with GamificationEnabled = Some enabled })
+
+/// Gamification defaults ON — only an explicit "off" disables XP/levels/badges.
+let gamificationOn (user: Models.User.UserProfile) = user.GamificationEnabled <> Some false
 
 /// Users who opted into the daily scheduled quote.
 let withDailyQuote () : UserProfile[] =

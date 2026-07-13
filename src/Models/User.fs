@@ -18,7 +18,8 @@ type UserProfile =
       TzOffsetMinutes: float option // minutes from UTC; None = server time
       NudgeMorning: string option // "HH:mm", default 08:00
       NudgeEvening: string option // "HH:mm", default 19:00
-      FreezeWeek: int option } // ISO-week index a streak-freeze was last used; None = never
+      FreezeWeek: int option // ISO-week index a streak-freeze was last used; None = never
+      GamificationEnabled: bool option } // XP/levels/badges; None = default ON
 
 module Categories =
     let all =

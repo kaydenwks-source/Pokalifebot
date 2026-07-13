@@ -40,11 +40,13 @@ let private overview (user: UserProfile) : string =
       sprintf "🌅 Daily quote: %s" quote
       sprintf "🎯 Calorie target: %s" target
       sprintf "📏 Height: %s" height
+      sprintf "🎮 Gamification: %s" (if Users.gamificationOn user then "on" else "off")
       ""
       "Change things:"
       "/settings timezone +8 — set your UTC offset (e.g. +8, -5:30)"
       "/settings morning 07:30 — move the morning nudge"
       "/settings evening 21:00 — move the evening nudge"
+      "/settings gamification on|off — XP, levels and badges"
       "/quotetime 07:00 — daily quote time · /nudges on|off"
       "/target 68 in 10 weeks — calorie goal · /height 175"
       ""
@@ -108,4 +110,19 @@ let handle (ctx: Context) : JS.Promise<obj> =
                     ctx.reply "What time? e.g. /settings evening 21:00"
                 else
                     setNudge ctx user "evening" rest
+            | "gamification"
+            | "game"
+            | "xp" ->
+                match rest.Trim().ToLowerInvariant() with
+                | "off" ->
+                    Users.setGamification user.Id false
+                    Logger.info (sprintf "%s turned gamification off" user.FirstName)
+                    ctx.reply "🎮 Gamification off. XP, levels and badges are paused — your logs still count for everything else. Turn it back on: /settings gamification on"
+                | "on" ->
+                    Users.setGamification user.Id true
+                    Logger.info (sprintf "%s turned gamification on" user.FirstName)
+                    ctx.reply "🎮 Gamification on — you'll earn XP again for habits, workouts, meals, sleep and goals. See /stats."
+                | _ ->
+                    let state = if Users.gamificationOn user then "on" else "off"
+                    ctx.reply (sprintf "Gamification is %s. Switch with /settings gamification on or /settings gamification off." state)
             | _ -> ctx.reply (overview user)

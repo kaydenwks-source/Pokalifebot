@@ -48,6 +48,8 @@ let private badgesFor (userId: float) : Badge[] =
 let handle (ctx: Context) : JS.Promise<obj> =
     match Common.ensureUser ctx with
     | None -> ctx.reply "Sorry, I couldn't identify you — please try again."
+    | Some user when not (Users.gamificationOn user) ->
+        ctx.reply "🎮 Gamification is off, so there's no XP, level or badges to show.\n\nEverything else still tracks normally. Turn it back on anytime: /settings gamification on"
     | Some user ->
         let xp = Gamification.xpFor user.Id
         let lvl = Gamification.levelFor xp
