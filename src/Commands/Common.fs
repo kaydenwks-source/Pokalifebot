@@ -10,17 +10,23 @@ let aiUnavailable =
     "😓 I couldn't reach my AI brain just now. Please try again in a minute."
 
 /// Raw argument string after a command: "/quote gym now" -> Some "gym now".
+/// On an inline-button (callback) update there is no typed command, so we
+/// return None — this lets the menu reuse any no-arg view handler safely
+/// without it misreading the menu message's own text as arguments.
 let commandArg (ctx: Context) : string option =
-    ctx.message
-    |> Option.bind (fun m -> m.text)
-    |> Option.bind (fun text ->
-        let parts =
-            text.Trim().Split(' ') |> Array.filter (fun p -> p.Trim() <> "")
+    match ctx.callbackQuery with
+    | Some _ -> None
+    | None ->
+        ctx.message
+        |> Option.bind (fun m -> m.text)
+        |> Option.bind (fun text ->
+            let parts =
+                text.Trim().Split(' ') |> Array.filter (fun p -> p.Trim() <> "")
 
-        if parts.Length >= 2 then
-            Some(String.concat " " (Array.skip 1 parts))
-        else
-            None)
+            if parts.Length >= 2 then
+                Some(String.concat " " (Array.skip 1 parts))
+            else
+                None)
 
 /// Argument words after a command: "/sleep 23:00 07:00" -> [|"23:00"; "07:00"|].
 let commandArgs (ctx: Context) : string[] =

@@ -4,10 +4,20 @@
 module Commands.Basic
 
 open Fable.Core
+open Fable.Core.JsInterop
 open Bindings
 open Bindings.Telegraf
 open Utils
 open Config
+
+/// A single inline button that opens the tap-first menu (Phase 28). Just emits
+/// the callback_data the Menu module listens for — no module dependency.
+let private openMenuButton: obj =
+    createObj
+        [ "reply_markup"
+          ==> createObj
+                  [ "inline_keyboard"
+                    ==> [| [| createObj [ "text" ==> "📱 Open the tap menu"; "callback_data" ==> "menu:home" ] |] |] ] ]
 
 let private displayName (ctx: Context) =
     ctx.from
@@ -30,6 +40,8 @@ let private logCommand (name: string) (ctx: Context) =
 
 let private helpText =
     [ "📋 Available commands"
+      ""
+      "📱 /menu — tap through everything, no typing needed"
       ""
       "/start — introduction and welcome"
       "/help — show this list"
@@ -118,16 +130,16 @@ let private startText name =
       "• Habit, sleep, meal and workout tracking"
       "• Personalised AI coaching and weekly reports"
       ""
-      "Type /help to see what I can do right now." ]
+      "Tap 📱 /menu (or the button below) to get started — no need to memorise anything." ]
     |> String.concat "\n"
 
 let handleStart (ctx: Context) =
     logCommand "start" ctx
-    ctx.reply (startText (displayName ctx))
+    ctx.reply (startText (displayName ctx), openMenuButton)
 
 let handleHelp (ctx: Context) =
     logCommand "help" ctx
-    ctx.reply helpText
+    ctx.reply (helpText, openMenuButton)
 
 let handlePing (ctx: Context) =
     logCommand "ping" ctx
@@ -138,4 +150,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 26 (premium)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 28 (tap menu)" Env.Version)

@@ -33,6 +33,21 @@ let create (config: Env.AppConfig) : Telegraf =
 
     for step in [ 1; 2; 3 ] do
         bot.action ("onb:skip:" + string step, Commands.Onboarding.handleSkip step)
+
+    // Phase 28 — tap-first menu. /menu opens the category browser; every menu
+    // button routes to one handler. Registering each callback_data explicitly
+    // keeps the binding simple (no regex).
+    bot.command ("menu", Commands.Menu.handleMenu)
+
+    for trigger in Commands.Menu.triggers do
+        bot.action (trigger, Commands.Menu.handleAction config)
+
+    // Register the command list so Telegram's ☰ button and /-autocomplete show
+    // a tappable, described menu. Fire-and-forget; a failure must not stop boot.
+    try
+        bot.telegram.setMyCommands Commands.Menu.botCommands |> ignore
+    with ex ->
+        Logger.warn (sprintf "setMyCommands failed: %s" ex.Message)
     bot.command ("ping", Commands.Basic.handlePing)
     bot.command ("version", Commands.Basic.handleVersion)
 

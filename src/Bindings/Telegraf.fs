@@ -59,6 +59,12 @@ type PreCheckoutQuery =
 type BotInfo =
     abstract username: string
 
+/// The callback_query attached to an inline-button press. We only need its
+/// data string to know which button was tapped.
+[<AllowNullLiteral>]
+type CallbackQuery =
+    abstract data: string option
+
 [<AllowNullLiteral>]
 type TelegramApi =
     abstract getMe: unit -> JS.Promise<BotInfo>
@@ -67,6 +73,9 @@ type TelegramApi =
     abstract getFileLink: fileId: string -> JS.Promise<obj>
     /// Refund a Stars payment by user id + telegram_payment_charge_id.
     abstract refundStarPayment: userId: float * chargeId: string -> JS.Promise<obj>
+    /// Register the bot's command list for Telegram's native /-autocomplete
+    /// and ☰ menu button. Pass an array of { command; description }.
+    abstract setMyCommands: commands: obj -> JS.Promise<obj>
 
 /// The per-update context Telegraf hands to every command/button handler.
 [<AllowNullLiteral>]
@@ -76,6 +85,8 @@ type Context =
     abstract message: IncomingMessage option
     /// Present on pre_checkout_query updates.
     abstract preCheckoutQuery: PreCheckoutQuery option
+    /// Present on inline-button (callback_query) updates.
+    abstract callbackQuery: CallbackQuery option
     abstract telegram: TelegramApi
     abstract reply: text: string -> JS.Promise<obj>
     abstract reply: text: string * extra: obj -> JS.Promise<obj>
@@ -89,6 +100,9 @@ type Context =
     /// Dismisses the loading spinner after an inline button press.
     abstract answerCbQuery: unit -> JS.Promise<obj>
     abstract editMessageText: text: string -> JS.Promise<obj>
+    /// Edit the current message's text AND its inline keyboard (pass extra
+    /// with reply_markup) — used to navigate between menu screens in place.
+    abstract editMessageText: text: string * extra: obj -> JS.Promise<obj>
 
 [<AllowNullLiteral>]
 type Telegraf =
