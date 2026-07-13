@@ -3,6 +3,9 @@
 /// dispatch to the matching tracker — so users can just say "ate chicken rice"
 /// or "slept 1am woke 8am" instead of remembering command syntax.
 ///
+/// The core `route` is also reused by voice input (Phase 27): a transcribed
+/// voice note is fed through the same intent router as typed text.
+///
 /// Budget note: this is the ONLY gate for the whole interaction. The router
 /// call is metered once; the sub-parsers it may invoke (food, workout,
 /// reminder, coach) are not double-counted.
@@ -10,18 +13,20 @@ module Commands.NaturalLanguage
 
 open Fable.Core
 open Bindings.Telegraf
+open Models.User
 open Services
 open Utils
 open Config
 
-let handle (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
+/// Route a piece of user text (typed or transcribed) to the right tracker.
+/// Handles the onboarding intercept first, then the AI budget + classifier.
+let route (config: Env.AppConfig) (user: UserProfile) (text: string) (ctx: Context) : JS.Promise<obj> =
     promise {
-        match Common.ensureUser ctx, (ctx.message |> Option.bind (fun m -> m.text)) with
-        // Mid-onboarding: the reply belongs to the setup wizard, not the AI
-        // router — route it there and skip classification entirely.
-        | Some user, Some text when user.OnboardingStep.IsSome && not (text.StartsWith "/") && text.Trim() <> "" ->
+        // Mid-onboarding: the text is an answer to the setup wizard, not a
+        // tracker command — hand it to the wizard and skip classification.
+        if user.OnboardingStep.IsSome then
             return! Commands.Onboarding.handleText config user text ctx
-        | Some user, Some text when not (text.StartsWith "/") && text.Trim() <> "" ->
+        else
             match Entitlements.check config.AdminUserId user "nl" with
             | Error budgetMsg -> return! ctx.reply budgetMsg
             | Ok() ->
@@ -123,5 +128,11 @@ let handle (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
                                 + "• ate chicken rice\n• slept 1am woke 8am\n• weighed 72\n• gym done\n"
                                 + "…or ask for advice. /help lists every command."
                             )
+    }
+
+let handle (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
+    promise {
+        match Common.ensureUser ctx, (ctx.message |> Option.bind (fun m -> m.text)) with
+        | Some user, Some text when not (text.StartsWith "/") && text.Trim() <> "" -> return! route config user text ctx
         | _ -> return box () // commands, empty text, or unidentified user → ignore
     }

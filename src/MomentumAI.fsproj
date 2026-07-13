@@ -62,6 +62,7 @@
     <Compile Include="Ai/Coach.fs" />
     <Compile Include="Ai/Router.fs" />
     <Compile Include="Ai/Timezone.fs" />
+    <Compile Include="Ai/Transcribe.fs" />
     <Compile Include="Commands/Common.fs" />
     <Compile Include="Commands/Basic.fs" />
     <Compile Include="Commands/Onboarding.fs" />
@@ -82,6 +83,7 @@
     <Compile Include="Commands/Focus.fs" />
     <Compile Include="Commands/Journal.fs" />
     <Compile Include="Commands/NaturalLanguage.fs" />
+    <Compile Include="Commands/Voice.fs" />
     <Compile Include="Commands/Settings.fs" />
     <Compile Include="Commands/Admin.fs" />
     <Compile Include="Scheduler/DailyQuotes.fs" />

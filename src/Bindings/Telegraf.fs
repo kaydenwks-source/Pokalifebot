@@ -22,11 +22,18 @@ type PhotoSize =
     abstract width: float
     abstract height: float
 
+/// A voice note (Telegram sends OGG/Opus). We only need the file id + length.
+[<AllowNullLiteral>]
+type VoiceLite =
+    abstract file_id: string
+    abstract duration: float
+
 [<AllowNullLiteral>]
 type IncomingMessage =
     abstract text: string option
     abstract photo: PhotoSize[] option
     abstract caption: string option
+    abstract voice: VoiceLite option
 
 [<AllowNullLiteral>]
 type BotInfo =

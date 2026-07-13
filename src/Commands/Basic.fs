@@ -90,6 +90,7 @@ let private helpText =
       ""
       "💬 Or just talk to me — no command needed"
       "\"ate chicken rice\" · \"slept 1am woke 8am\" · \"weighed 72\" · \"gym done\""
+      "🎙 …or send a voice note — I'll transcribe and log it."
       ""
       "⚙️ Settings"
       "/settings — see everything · /settings timezone +8"
@@ -129,4 +130,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 21 (onboarding) + smart goal tracking" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 27 (voice input)" Env.Version)

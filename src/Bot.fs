@@ -112,6 +112,10 @@ let create (config: Env.AppConfig) : Telegraf =
     bot.command ("mood", Commands.Journal.handleMood)
     bot.command ("journal", Commands.Journal.handleJournal)
 
+    // Phase 27 — voice input. A voice note is transcribed then routed through
+    // the same natural-language handler as typed text.
+    bot.on (messageFilter "voice", Commands.Voice.handle config)
+
     // Phase 22 — natural language. Any plain-text message that no command
     // above handled falls through to the intent router. Registered LAST so
     // slash-commands always win.
