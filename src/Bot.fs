@@ -102,6 +102,11 @@ let create (config: Env.AppConfig) : Telegraf =
     bot.command ("export", Commands.Account.handleExport)
     bot.command ("deleteme", Commands.Account.handleDeleteMe)
 
+    // Phase 24 — focus sessions + journaling
+    bot.command ("focus", Commands.Focus.handle)
+    bot.command ("mood", Commands.Journal.handleMood)
+    bot.command ("journal", Commands.Journal.handleJournal)
+
     // Phase 22 — natural language. Any plain-text message that no command
     // above handled falls through to the intent router. Registered LAST so
     // slash-commands always win.

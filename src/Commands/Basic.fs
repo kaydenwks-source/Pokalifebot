@@ -83,6 +83,11 @@ let private helpText =
       "🧠 Coach"
       "/coach <what's up> — talk it out, e.g. /coach I feel lazy"
       ""
+      "🍅 Focus & journal"
+      "/focus 25 — start a Pomodoro; I'll ping you when it's up"
+      "/focus status · /focus stop — check or end the current session"
+      "/mood 4 [note] — log how you feel (1–5) · /journal <text> — reflect"
+      ""
       "💬 Or just talk to me — no command needed"
       "\"ate chicken rice\" · \"slept 1am woke 8am\" · \"weighed 72\" · \"gym done\""
       ""
@@ -124,4 +129,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 23 (gamification + streak freeze)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 24 (focus sessions + journaling)" Env.Version)

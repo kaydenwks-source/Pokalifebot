@@ -20,6 +20,8 @@ module Points =
     let Meal = 3
     let Goal = 20 // logging progress on a goal
     let GoalComplete = 100
+    let Focus = 10 // completing a focus session (>= 10 min)
+    let Reflect = 5 // a mood/journal check-in, once per day
 
 let private getAll () : XpRecord[] =
     Storage.load<XpRecord[]> filePath |> Option.defaultValue [||]

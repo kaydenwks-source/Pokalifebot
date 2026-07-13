@@ -114,7 +114,45 @@ let weeklyData (user: UserProfile) : string =
             |> Array.map (fun g -> sprintf "Goal %s: %d%% complete" g.Name (Goals.percentOf g))
             |> String.concat "\n"
 
-    [ sleepLine; habitLines; foodLine; workoutLine; weightLine; taskLine; goalLines ]
+    let focusLine =
+        let sessions =
+            Focus.forUser user.Id
+            |> Array.filter (fun s -> s.Date > cutoff && s.Completed)
+
+        if sessions.Length = 0 then
+            "Focus: no focus sessions this week"
+        else
+            sprintf "Focus: %d sessions, %d min focused this week" sessions.Length (sessions |> Array.sumBy (fun s -> s.Minutes))
+
+    let moodLine =
+        let moods = Reflections.recentMoods user.Id 7
+
+        if moods.Length = 0 then
+            "Mood: not logged this week"
+        else
+            sprintf "Mood: %d check-ins, average %.1f/5" moods.Length (float (Array.sum moods) / float moods.Length)
+
+    let journalLine =
+        let notes =
+            Reflections.forUser user.Id
+            |> Array.filter (fun r -> r.Date > cutoff)
+            |> Array.choose (fun r -> r.Text)
+
+        if notes.Length = 0 then
+            "Journal: no entries this week"
+        else
+            sprintf "Journal: %d entries. Recent notes: %s" notes.Length (notes |> Array.truncate 3 |> String.concat " | ")
+
+    [ sleepLine
+      habitLines
+      foodLine
+      workoutLine
+      weightLine
+      taskLine
+      goalLines
+      focusLine
+      moodLine
+      journalLine ]
     |> String.concat "\n"
 
 // ── monthly (30-day) report data ─────────────────────────────────────
@@ -335,6 +373,29 @@ let monthlyData (user: UserProfile) : string =
                   sprintf "Goal %s: %d%% complete" g.Name (Goals.percentOf g) ]
             |> String.concat "\n"
 
+    let focusLine =
+        let sessions =
+            Focus.forUser user.Id
+            |> Array.filter (fun s -> s.Date > cutoff && s.Completed)
+
+        if sessions.Length = 0 then
+            None
+        else
+            Some(
+                sprintf
+                    "Focus: %d sessions in 30 days, %d min focused total"
+                    sessions.Length
+                    (sessions |> Array.sumBy (fun s -> s.Minutes))
+            )
+
+    let moodLine =
+        let moods = Reflections.recentMoods user.Id 30
+
+        if moods.Length = 0 then
+            None
+        else
+            Some(sprintf "Mood: %d check-ins, average %.1f/5 this month" moods.Length (float (Array.sum moods) / float moods.Length))
+
     let scoreLine =
         sprintf "Productivity score (deterministic 0-100 from behaviour data): %d" (productivityScore user)
 
@@ -374,6 +435,8 @@ let monthlyData (user: UserProfile) : string =
       Some weightLine
       Some taskLine
       Some goalLines
+      focusLine
+      moodLine
       Some scoreLine
       newUserNote ]
     |> List.choose id

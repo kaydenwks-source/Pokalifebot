@@ -22,7 +22,9 @@ let private collections =
       "database/busy.json"
       "database/goals.json"
       "database/coach.json"
-      "database/xp.json" ]
+      "database/xp.json"
+      "database/focus.json"
+      "database/journal.json" ]
 
 let private loadRows (path: string) : obj[] =
     Storage.load<obj[]> path |> Option.defaultValue [||]
@@ -53,7 +55,9 @@ let export (userId: float) : obj =
           "busy" ==> section "database/busy.json"
           "goals" ==> section "database/goals.json"
           "coach" ==> section "database/coach.json"
-          "xp" ==> section "database/xp.json" ]
+          "xp" ==> section "database/xp.json"
+          "focus" ==> section "database/focus.json"
+          "journal" ==> section "database/journal.json" ]
 
 let private deleteWhereUser (d: Sqlite.Database) (table: string) (userId: float) =
     try

@@ -33,6 +33,14 @@ let nodeProcess: IProcess = jsNative
 [<Emit("Buffer.from($0, 'utf8')")>]
 let bufferFrom (s: string) : obj = jsNative
 
+/// One-shot timer. Returns a handle usable with clearTimeout. Note the
+/// argument order flip: JS is setTimeout(cb, ms); we take (ms, cb).
+[<Emit("setTimeout($1, $0)")>]
+let setTimeout (ms: int) (callback: unit -> unit) : obj = jsNative
+
+[<Emit("clearTimeout($0)")>]
+let clearTimeout (handle: obj) : unit = jsNative
+
 [<Emit("process.env[$0]")>]
 let private envRaw (name: string) : string = jsNative
 

@@ -24,6 +24,8 @@
     <Compile Include="Models/Workout.fs" />
     <Compile Include="Models/Commitment.fs" />
     <Compile Include="Models/Goal.fs" />
+    <Compile Include="Models/Focus.fs" />
+    <Compile Include="Models/Reflection.fs" />
     <Compile Include="Services/Storage.fs" />
     <Compile Include="Services/Users.fs" />
     <Compile Include="Services/Gamification.fs" />
@@ -37,6 +39,8 @@
     <Compile Include="Services/Commitments.fs" />
     <Compile Include="Services/Energy.fs" />
     <Compile Include="Services/Goals.fs" />
+    <Compile Include="Services/Focus.fs" />
+    <Compile Include="Services/Reflections.fs" />
     <Compile Include="Services/Reports.fs" />
     <Compile Include="Services/CoachHistory.fs" />
     <Compile Include="Services/Analytics.fs" />
@@ -73,6 +77,8 @@
     <Compile Include="Commands/Coach.fs" />
     <Compile Include="Commands/Account.fs" />
     <Compile Include="Commands/Stats.fs" />
+    <Compile Include="Commands/Focus.fs" />
+    <Compile Include="Commands/Journal.fs" />
     <Compile Include="Commands/NaturalLanguage.fs" />
     <Compile Include="Commands/Settings.fs" />
     <Compile Include="Commands/Admin.fs" />
