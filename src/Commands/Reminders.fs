@@ -34,7 +34,7 @@ let handleRemind (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
             | None -> return! ctx.reply usage
             | Some request ->
                 ctx.sendChatAction "typing" |> ignore
-                let! parsed = Ai.ReminderParser.parse config request
+                let! parsed = Ai.ReminderParser.parse config (Time.userNow user.TzOffsetMinutes) request
 
                 match parsed with
                 | Error err ->

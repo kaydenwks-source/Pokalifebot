@@ -6,9 +6,10 @@ open Fable.Core
 open Bindings
 open Bindings.Telegraf
 open Models.Reminder
+open Services
 open Utils
 
-let private fire (bot: Telegraf) (reminder: Reminder) =
+let private fire (bot: Telegraf) (nowStamp: string) (reminder: Reminder) =
     promise {
         try
             let! _ = bot.telegram.sendMessage (reminder.ChatId, "⏰ Reminder: " + reminder.Text)
@@ -18,17 +19,25 @@ let private fire (bot: Telegraf) (reminder: Reminder) =
 
         // Advance/remove even if sending failed — a permanently broken chat
         // must not make the same reminder fire forever.
-        Services.Reminders.completeOccurrence reminder
+        Services.Reminders.completeOccurrence nowStamp reminder
     }
 
 let start (bot: Telegraf) =
     Cron.cron.schedule (
         "* * * * *",
         fun () ->
-            let nowStamp = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm")
+            // Each reminder is judged against ITS OWNER'S local clock, so a
+            // "9am" reminder fires at the user's 9am wherever the server runs.
+            Services.Reminders.getAll ()
+            |> Array.iter (fun r ->
+                let tz =
+                    Users.find r.UserId
+                    |> Option.bind (fun u -> u.TzOffsetMinutes)
 
-            Services.Reminders.due nowStamp
-            |> Array.iter (fun r -> fire bot r |> ignore)
+                let nowStamp = (Time.userNow tz).ToString("yyyy-MM-dd HH:mm")
+
+                if r.DueDate + " " + r.DueTime <= nowStamp then
+                    fire bot nowStamp r |> ignore)
     )
     |> ignore
 

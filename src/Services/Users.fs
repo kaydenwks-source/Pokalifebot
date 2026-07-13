@@ -42,7 +42,10 @@ let upsert (id: float) (chatId: float) (firstName: string) (username: string opt
               HeightCm = None
               TargetWeightKg = None
               TargetDate = None
-              DailyKcalTarget = None }
+              DailyKcalTarget = None
+              TzOffsetMinutes = None
+              NudgeMorning = None
+              NudgeEvening = None }
 
         saveAll (Array.append users [| fresh |])
         Logger.info (sprintf "New user registered: %s (id %.0f)" firstName id)
@@ -78,6 +81,15 @@ let clearTarget (id: float) =
             TargetWeightKg = None
             TargetDate = None
             DailyKcalTarget = None })
+
+let setTimezone (id: float) (offsetMinutes: float) =
+    update id (fun u -> { u with TzOffsetMinutes = Some offsetMinutes })
+
+let setNudgeMorning (id: float) (time: string) =
+    update id (fun u -> { u with NudgeMorning = Some time })
+
+let setNudgeEvening (id: float) (time: string) =
+    update id (fun u -> { u with NudgeEvening = Some time })
 
 /// Nudges default ON — only an explicit "off" disables them.
 let nudgesOn (user: Models.User.UserProfile) = user.NudgesEnabled <> Some false

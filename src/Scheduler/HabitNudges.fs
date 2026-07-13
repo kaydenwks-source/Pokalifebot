@@ -1,6 +1,7 @@
-/// Twice-daily habit nudges: 08:00 lays out the day's habits, 19:00 is
+/// Twice-daily habit nudges: morning lays out the day's habits, evening is
 /// the last call for anything still open (or a clean-sweep celebration).
-/// Times are server-local; per-user times arrive with Phase 14 settings.
+/// Each user picks their own two times (defaults 08:00 / 19:00), matched
+/// against their own local clock (Phase 14).
 module Scheduler.HabitNudges
 
 open Fable.Core
@@ -40,29 +41,55 @@ let private messageFor (kind: Kind) (firstName: string) (habits: Habit[]) : stri
         | Evening -> Some "🌙 All habits done — clean sweep! 🎉 Rest well."
         | Morning -> None // nothing pending in the morning = nothing to say
 
+let private label (kind: Kind) =
+    match kind with
+    | Morning -> "morning"
+    | Evening -> "evening"
+
+/// Send one user their nudge for this kind, if they have anything worth saying.
+let sendNudgeTo (bot: Telegraf) (kind: Kind) (user: Models.User.UserProfile) : JS.Promise<unit> =
+    promise {
+        let habits = Habits.forUser user.Id
+
+        if habits.Length > 0 then
+            match messageFor kind user.FirstName habits with
+            | Some text ->
+                try
+                    let! _ = bot.telegram.sendMessage (user.ChatId, text)
+                    Logger.info (sprintf "Habit nudge (%s) sent to %s" (label kind) user.FirstName)
+                with ex ->
+                    Logger.error (sprintf "Habit nudge to %s failed: %s" user.FirstName ex.Message)
+            | None -> ()
+    }
+
 /// Public so tests can trigger a nudge round without waiting for the cron.
 let sendNudges (bot: Telegraf) (kind: Kind) : JS.Promise<unit> =
     promise {
-        let label = match kind with Morning -> "morning" | Evening -> "evening"
-
-        let users =
-            Users.getAll () |> Array.filter Users.nudgesOn
+        let users = Users.getAll () |> Array.filter Users.nudgesOn
 
         for user in users do
-            let habits = Habits.forUser user.Id
-
-            if habits.Length > 0 then
-                match messageFor kind user.FirstName habits with
-                | Some text ->
-                    try
-                        let! _ = bot.telegram.sendMessage (user.ChatId, text)
-                        Logger.info (sprintf "Habit nudge (%s) sent to %s" label user.FirstName)
-                    with ex ->
-                        Logger.error (sprintf "Habit nudge to %s failed: %s" user.FirstName ex.Message)
-                | None -> ()
+            do! sendNudgeTo bot kind user
     }
 
+/// Each user's configured time, defaulting to the classic 08:00 / 19:00.
+let private timeFor (kind: Kind) (user: Models.User.UserProfile) =
+    match kind with
+    | Morning -> user.NudgeMorning |> Option.defaultValue "08:00"
+    | Evening -> user.NudgeEvening |> Option.defaultValue "19:00"
+
 let start (bot: Telegraf) =
-    Cron.cron.schedule ("0 8 * * *", fun () -> sendNudges bot Morning |> ignore) |> ignore
-    Cron.cron.schedule ("0 19 * * *", fun () -> sendNudges bot Evening |> ignore) |> ignore
-    Logger.info "Habit nudge scheduler started (08:00 and 19:00 daily)"
+    Cron.cron.schedule (
+        "* * * * *",
+        fun () ->
+            Users.getAll ()
+            |> Array.filter Users.nudgesOn
+            |> Array.iter (fun user ->
+                let now = (Time.userNow user.TzOffsetMinutes).ToString("HH:mm")
+
+                for kind in [ Morning; Evening ] do
+                    if timeFor kind user = now then
+                        sendNudgeTo bot kind user |> ignore)
+    )
+    |> ignore
+
+    Logger.info "Habit nudge scheduler started (per-user times, checks every minute)"

@@ -1,6 +1,6 @@
 /// Daily quote delivery: a cron job ticks once per minute and sends a
-/// fresh AI quote to every user whose chosen time just arrived.
-/// Times are server-local for now — per-user timezones come in Phase 14.
+/// fresh AI quote to every user whose chosen time just arrived. The chosen
+/// time is matched against each user's own local clock (Phase 14).
 module Scheduler.DailyQuotes
 
 open Fable.Core
@@ -28,10 +28,10 @@ let start (config: Env.AppConfig) (bot: Telegraf) =
     Cron.cron.schedule (
         "* * * * *",
         fun () ->
-            let now = System.DateTime.Now.ToString("HH:mm")
-
             Users.withDailyQuote ()
-            |> Array.filter (fun u -> u.QuoteTime = Some now)
+            |> Array.filter (fun u ->
+                let now = (Time.userNow u.TzOffsetMinutes).ToString("HH:mm")
+                u.QuoteTime = Some now)
             |> Array.iter (fun u -> sendTo config bot u |> ignore)
     )
     |> ignore

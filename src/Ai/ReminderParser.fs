@@ -47,9 +47,9 @@ let private systemPrompt (now: System.DateTime) =
       "Relative times like \"in 2 hours\" -> compute from the current datetime." ]
     |> String.concat " "
 
-let parse (config: Env.AppConfig) (input: string) : JS.Promise<Result<ParsedReminder, string>> =
+let parse (config: Env.AppConfig) (now: System.DateTime) (input: string) : JS.Promise<Result<ParsedReminder, string>> =
     promise {
-        let! result = DeepSeek.chatJson config (systemPrompt System.DateTime.Now) input
+        let! result = DeepSeek.chatJson config (systemPrompt now) input
 
         match result with
         | Error e -> return Error e

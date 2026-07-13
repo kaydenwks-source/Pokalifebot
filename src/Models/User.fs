@@ -14,7 +14,10 @@ type UserProfile =
       HeightCm: float option // for BMI; set via /height
       TargetWeightKg: float option // weight goal; set via /target
       TargetDate: string option // "yyyy-MM-dd" goal deadline
-      DailyKcalTarget: float option } // computed calorie target
+      DailyKcalTarget: float option // computed calorie target
+      TzOffsetMinutes: float option // minutes from UTC; None = server time
+      NudgeMorning: string option // "HH:mm", default 08:00
+      NudgeEvening: string option } // "HH:mm", default 19:00
 
 module Categories =
     let all =

@@ -28,12 +28,15 @@ let sendReport (config: Env.AppConfig) (bot: Telegraf) (user: Models.User.UserPr
 
 let start (config: Env.AppConfig) (bot: Telegraf) =
     Cron.cron.schedule (
-        "0 9 1 * *",
+        "* * * * *",
         fun () ->
             Users.getAll ()
+            |> Array.filter (fun u ->
+                let now = Time.userNow u.TzOffsetMinutes
+                now.Day = 1 && now.ToString("HH:mm") = "09:00")
             |> Array.filter (fun u -> Users.nudgesOn u && Reports.hasActivity 30.0 u)
             |> Array.iter (fun u -> sendReport config bot u |> ignore)
     )
     |> ignore
 
-    Logger.info "Monthly report scheduler started (1st of month, 09:00)"
+    Logger.info "Monthly report scheduler started (per-user 1st of month, 09:00)"

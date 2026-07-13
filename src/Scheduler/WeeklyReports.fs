@@ -28,14 +28,17 @@ let sendReport (config: Env.AppConfig) (bot: Telegraf) (user: Models.User.UserPr
     }
 
 let start (config: Env.AppConfig) (bot: Telegraf) =
-    // Sundays 20:00 server time — end-of-week, before the new week starts.
+    // Each user's own Sunday 20:00 — end-of-week, before the new week starts.
     Cron.cron.schedule (
-        "0 20 * * 0",
+        "* * * * *",
         fun () ->
             Users.getAll ()
+            |> Array.filter (fun u ->
+                let now = Time.userNow u.TzOffsetMinutes
+                now.DayOfWeek = System.DayOfWeek.Sunday && now.ToString("HH:mm") = "20:00")
             |> Array.filter (fun u -> Users.nudgesOn u && Reports.hasRecentActivity u)
             |> Array.iter (fun u -> sendReport config bot u |> ignore)
     )
     |> ignore
 
-    Logger.info "Weekly report scheduler started (Sundays 20:00)"
+    Logger.info "Weekly report scheduler started (per-user Sundays 20:00)"

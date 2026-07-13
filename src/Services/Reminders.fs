@@ -69,11 +69,12 @@ let private nextDate (repeat: string) (fromDate: System.DateTime) : System.DateT
 
 /// After a reminder fires: delete it if one-time, otherwise advance the
 /// due date past now (looping covers multi-day offline gaps).
-let completeOccurrence (reminder: Reminder) =
+/// nowStamp is the user's local "yyyy-MM-dd HH:mm" so recurrence lands
+/// correctly across timezones.
+let completeOccurrence (nowStamp: string) (reminder: Reminder) =
     match nextDate reminder.Repeat (System.DateTime.Parse reminder.DueDate) with
     | None -> remove reminder.Id
     | Some first ->
-        let nowStamp = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm")
         let mutable next = first
 
         while next.ToString("yyyy-MM-dd") + " " + reminder.DueTime <= nowStamp do

@@ -19,3 +19,4 @@ database/*.db
 # OS noise
 Thumbs.db
 .DS_Store
+logs/*.out

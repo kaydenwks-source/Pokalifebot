@@ -21,7 +21,7 @@ const phrases = [
   'in 2 hours drink water',
 ];
 for (const phrase of phrases) {
-  const res = await parser.parse(cfg, phrase);
+  const res = await parser.parse(cfg, new Date(), phrase);
   console.log(
     `"${phrase}" =>`,
     res.tag === 0 ? JSON.stringify(res.fields[0]) : 'ERROR: ' + res.fields[0]
@@ -40,7 +40,9 @@ const daily = svc.add(FAKE, FAKE, 'test daily', ymd(yesterday), '00:01', 'daily'
 
 console.log('listed:', svc.forUser(FAKE).length, 'reminders (expect 2)');
 
-svc.completeOccurrence(daily);
+const nowD = new Date();
+const nowStamp = `${ymd(nowD)} ${pad(nowD.getHours())}:${pad(nowD.getMinutes())}`;
+svc.completeOccurrence(nowStamp, daily);
 const after = svc.forUser(FAKE).find((r) => r.Id === daily.Id);
 console.log(
   'daily advanced from', daily.DueDate, 'to', after.DueDate,
