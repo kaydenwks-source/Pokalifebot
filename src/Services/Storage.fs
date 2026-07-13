@@ -64,6 +64,10 @@ let private db =
 
          d)
 
+/// The shared SQLite connection, for features that warrant a real table
+/// (analytics' append-and-aggregate workload) rather than a KV blob.
+let database () : Sqlite.Database = db.Value
+
 /// Read a collection into a typed value. None when absent or corrupt
 /// (corruption is logged — the bot keeps running with empty data).
 let load<'T> (path: string) : 'T option =

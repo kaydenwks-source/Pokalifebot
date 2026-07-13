@@ -63,6 +63,11 @@ type Telegraf =
     abstract action: trigger: string * handler: (Context -> JS.Promise<obj>) -> unit
     /// Fires for updates matching a telegraf/filters predicate.
     abstract on: filter: obj * handler: (Context -> JS.Promise<obj>) -> unit
+    /// Global middleware run on every update before command handlers.
+    /// Telegraf calls it as fn(ctx, next); the Func maps to a real 2-arg
+    /// JS function (a curried F# lambda would not). Must call next() to
+    /// pass control along the chain.
+    abstract ``use``: middleware: System.Func<Context, (unit -> JS.Promise<unit>), JS.Promise<unit>> -> unit
     abstract catch: handler: System.Func<obj, Context, unit> -> unit
     abstract launch: onLaunch: (unit -> unit) -> JS.Promise<unit>
     abstract stop: reason: string -> unit

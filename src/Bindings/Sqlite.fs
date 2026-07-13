@@ -39,3 +39,14 @@ let getScalar (stmt: Statement) : obj = jsNative
 /// INSERT/UPSERT bound with (key, data).
 [<Emit("$0.run($1, $2)")>]
 let runKv (stmt: Statement) (key: string) (data: string) : obj = jsNative
+
+// General-purpose forms: bind an arbitrary parameter list (spread into the
+// call) for statements that aren't the simple key-value shape above.
+[<Emit("$0.run(...$1)")>]
+let run (stmt: Statement) (args: obj[]) : obj = jsNative
+
+[<Emit("$0.get(...$1)")>]
+let getRow (stmt: Statement) (args: obj[]) : obj = jsNative
+
+[<Emit("$0.all(...$1)")>]
+let all (stmt: Statement) (args: obj[]) : obj[] = jsNative

@@ -17,6 +17,15 @@ let handle (config: Env.AppConfig) (ctx: Context) =
             users |> Array.filter (fun u -> u.QuoteTime.IsSome) |> Array.length
 
         let sleepLogCount = SleepLogs.getAll () |> Array.length
+        let a = Analytics.summary ()
+
+        let topLines =
+            if a.Top.Length = 0 then
+                [ "  (no commands recorded yet)" ]
+            else
+                a.Top
+                |> Array.toList
+                |> List.map (fun t -> sprintf "  /%s — %d" t.Command t.Count)
 
         [ "🛠 Admin panel"
           ""
@@ -31,7 +40,13 @@ let handle (config: Env.AppConfig) (ctx: Context) =
           sprintf "Weight logs: %d" (WeightLogs.getAll () |> Array.length)
           sprintf "Workouts: %d" (Workouts.getAll () |> Array.length)
           sprintf "Busy blocks: %d" (Commitments.getAll () |> Array.length)
-          sprintf "Goals: %d" (Goals.getAll () |> Array.length) ]
+          sprintf "Goals: %d" (Goals.getAll () |> Array.length)
+          ""
+          "📈 Activity"
+          sprintf "Commands: %d total · %d in 24h · %d in 7d" a.Total a.Last24h a.Last7d
+          sprintf "Active users (7d): %d" a.ActiveUsers7d
+          "Top commands:" ]
+        @ topLines
         |> String.concat "\n"
         |> ctx.reply
     | Some from, _ ->

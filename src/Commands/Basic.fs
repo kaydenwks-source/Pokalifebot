@@ -118,4 +118,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 15 (SQLite storage)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 16 (analytics)" Env.Version)

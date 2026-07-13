@@ -38,6 +38,7 @@
     <Compile Include="Services/Goals.fs" />
     <Compile Include="Services/Reports.fs" />
     <Compile Include="Services/CoachHistory.fs" />
+    <Compile Include="Services/Analytics.fs" />
     <Compile Include="Ai/DeepSeek.fs" />
     <Compile Include="Ai/Quotes.fs" />
     <Compile Include="Ai/Sleep.fs" />

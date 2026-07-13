@@ -3,6 +3,7 @@
 /// command registrations here and nowhere else.
 module Bot
 
+open Fable.Core
 open Bindings
 open Bindings.Telegraf
 open Utils
@@ -10,6 +11,20 @@ open Config
 
 let create (config: Env.AppConfig) : Telegraf =
     let bot = Telegraf.create config.BotToken
+
+    // Phase 16 — usage analytics. Runs before every handler, records the
+    // slash-command, then hands control on. Registered first so nothing is
+    // missed; wrapped so a logging failure can never drop a real command.
+    bot.``use`` (
+        System.Func<_, _, _>(fun (ctx: Context) (next: unit -> JS.Promise<unit>) ->
+            match ctx.from, ctx.message |> Option.bind (fun m -> m.text) with
+            | Some from, Some text when text.StartsWith "/" ->
+                let cmd = text.Substring(1).Split([| ' '; '@' |]).[0].ToLowerInvariant()
+                if cmd <> "" then Services.Analytics.record from.id cmd
+            | _ -> ()
+
+            next ())
+    )
 
     bot.start Commands.Basic.handleStart
     bot.help Commands.Basic.handleHelp
