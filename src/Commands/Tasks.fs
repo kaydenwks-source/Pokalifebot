@@ -238,19 +238,24 @@ let handlePlan (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
                     ctx.reply
                         "Nothing to plan — everything's done! Add a task (/task add finish essay !high) if something's on your mind."
             else
-                Logger.info (sprintf "/plan for %s (%d tasks, %d pending habits)" user.FirstName tasks.Length pending.Length)
-                ctx.sendChatAction "typing" |> ignore
+                match Entitlements.check config.AdminUserId user "plan" with
+                | Error budgetMsg -> return! ctx.reply budgetMsg
+                | Ok() ->
+                    Logger.info (sprintf "/plan for %s (%d tasks, %d pending habits)" user.FirstName tasks.Length pending.Length)
+                    ctx.sendChatAction "typing" |> ignore
 
-                // Most recent bed time as the bedtime anchor, else 23:30.
-                let bedtime =
-                    SleepLogs.forUser user.Id
-                    |> Array.tryHead
-                    |> Option.map (fun l -> l.BedTime)
-                    |> Option.defaultValue "23:30"
+                    // Most recent bed time as the bedtime anchor, else 23:30.
+                    let bedtime =
+                        SleepLogs.forUser user.Id
+                        |> Array.tryHead
+                        |> Option.map (fun l -> l.BedTime)
+                        |> Option.defaultValue "23:30"
 
-                let! result = Ai.Planner.plan config user tasks pending busyToday bedtime
+                    let! result = Ai.Planner.plan config user tasks pending busyToday bedtime
 
-                match result with
-                | Ok text -> return! ctx.reply ("📅 Your plan for the rest of today:\n\n" + text.Trim())
-                | Error _ -> return! ctx.reply Common.aiUnavailable
+                    match result with
+                    | Ok text ->
+                        Entitlements.commit config.AdminUserId user "plan"
+                        return! ctx.reply ("📅 Your plan for the rest of today:\n\n" + text.Trim())
+                    | Error _ -> return! ctx.reply Common.aiUnavailable
     }

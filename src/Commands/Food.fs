@@ -47,20 +47,24 @@ let handleFood (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
                     return! ctx.reply (sprintf "🗑 Removed: %s (%d kcal)" meal.Name meal.Calories)
                 | None -> return! ctx.reply "Nothing logged today to remove."
             | Some description ->
-                ctx.sendChatAction "typing" |> ignore
-                let! result = Ai.FoodAnalyzer.analyse config description
+                match Entitlements.check config.AdminUserId user "food" with
+                | Error budgetMsg -> return! ctx.reply budgetMsg
+                | Ok() ->
+                    ctx.sendChatAction "typing" |> ignore
+                    let! result = Ai.FoodAnalyzer.analyse config description
 
-                match result with
-                | Ok nutrition ->
-                    let meal = Meals.add user.Id nutrition
-                    Logger.info (sprintf "%s logged meal: %s (%d kcal)" user.FirstName meal.Name meal.Calories)
-                    return! ctx.reply (mealText meal (Energy.summary user meal.Date))
-                | Error err ->
-                    Logger.warn (sprintf "Food analysis failed for %s: %s" user.FirstName err)
+                    match result with
+                    | Ok nutrition ->
+                        Entitlements.commit config.AdminUserId user "food"
+                        let meal = Meals.add user.Id nutrition
+                        Logger.info (sprintf "%s logged meal: %s (%d kcal)" user.FirstName meal.Name meal.Calories)
+                        return! ctx.reply (mealText meal (Energy.summary user meal.Date))
+                    | Error err ->
+                        Logger.warn (sprintf "Food analysis failed for %s: %s" user.FirstName err)
 
-                    return!
-                        ctx.reply
-                            "🤔 I couldn't analyse that as a meal. Describe what you ate, e.g.:\n/food 2 eggs, toast with butter and a kopi"
+                        return!
+                            ctx.reply
+                                "🤔 I couldn't analyse that as a meal. Describe what you ate, e.g.:\n/food 2 eggs, toast with butter and a kopi"
     }
 
 let private showToday (user: UserProfile) (ctx: Context) =
@@ -168,58 +172,62 @@ let handlePhoto (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
                 if photos.Length = 0 then
                     return! ctx.reply "I couldn't read that photo — please try sending it again."
                 else
-                    ctx.sendChatAction "typing" |> ignore
+                    match Entitlements.check config.AdminUserId user "food_photo" with
+                    | Error budgetMsg -> return! ctx.reply budgetMsg
+                    | Ok() ->
+                        ctx.sendChatAction "typing" |> ignore
 
-                    // Telegram sends several sizes, smallest first. ~1280px is
-                    // plenty for food recognition and keeps requests small.
-                    let best =
-                        photos
-                        |> Array.filter (fun p -> p.width <= 1300.0)
-                        |> Array.sortByDescending (fun p -> p.width)
-                        |> Array.tryHead
-                        |> Option.defaultValue photos.[photos.Length - 1]
+                        // Telegram sends several sizes, smallest first. ~1280px is
+                        // plenty for food recognition and keeps requests small.
+                        let best =
+                            photos
+                            |> Array.filter (fun p -> p.width <= 1300.0)
+                            |> Array.sortByDescending (fun p -> p.width)
+                            |> Array.tryHead
+                            |> Option.defaultValue photos.[photos.Length - 1]
 
-                    let! linkObj = ctx.telegram.getFileLink best.file_id
-                    let url: string = !!(linkObj?href)
-                    let! downloaded = Ai.Vision.downloadAsDataUri url
+                        let! linkObj = ctx.telegram.getFileLink best.file_id
+                        let url: string = !!(linkObj?href)
+                        let! downloaded = Ai.Vision.downloadAsDataUri url
 
-                    match downloaded with
-                    | Error err ->
-                        Logger.error ("Photo download failed: " + err)
-                        return! ctx.reply "😓 I couldn't download that photo — please try again."
-                    | Ok dataUri ->
-                        let caption = ctx.message |> Option.bind (fun m -> m.caption)
-                        let! described = Ai.Vision.describeImage config dataUri caption
-
-                        match described with
-                        | Error "NOT_FOOD" ->
-                            return!
-                                ctx.reply
-                                    "🤔 That doesn't look like food to me. If it is, describe it: /food chicken rice"
+                        match downloaded with
                         | Error err ->
-                            Logger.error ("Vision analysis failed: " + err)
+                            Logger.error ("Photo download failed: " + err)
+                            return! ctx.reply "😓 I couldn't download that photo — please try again."
+                        | Ok dataUri ->
+                            let caption = ctx.message |> Option.bind (fun m -> m.caption)
+                            let! described = Ai.Vision.describeImage config dataUri caption
 
-                            return!
-                                ctx.reply
-                                    "😓 Photo analysis failed — describe it instead: /food chicken rice, large portion"
-                        | Ok description ->
-                            Logger.info (sprintf "%s photo described: %s" user.FirstName description)
-                            let! result = Ai.FoodAnalyzer.analyse config description
-
-                            match result with
-                            | Ok nutrition ->
-                                let meal = Meals.add user.Id nutrition
-
+                            match described with
+                            | Error "NOT_FOOD" ->
                                 return!
-                                    ctx.reply (
-                                        mealText meal (Energy.summary user meal.Date)
-                                        + "\n\n📸 What I saw: "
-                                        + description
-                                    )
+                                    ctx.reply
+                                        "🤔 That doesn't look like food to me. If it is, describe it: /food chicken rice"
                             | Error err ->
-                                Logger.warn ("Food analysis of photo description failed: " + err)
+                                Logger.error ("Vision analysis failed: " + err)
 
                                 return!
                                     ctx.reply
-                                        "😓 I couldn't turn that photo into a meal log — try /food with a short description."
+                                        "😓 Photo analysis failed — describe it instead: /food chicken rice, large portion"
+                            | Ok description ->
+                                Logger.info (sprintf "%s photo described: %s" user.FirstName description)
+                                let! result = Ai.FoodAnalyzer.analyse config description
+
+                                match result with
+                                | Ok nutrition ->
+                                    Entitlements.commit config.AdminUserId user "food_photo"
+                                    let meal = Meals.add user.Id nutrition
+
+                                    return!
+                                        ctx.reply (
+                                            mealText meal (Energy.summary user meal.Date)
+                                            + "\n\n📸 What I saw: "
+                                            + description
+                                        )
+                                | Error err ->
+                                    Logger.warn ("Food analysis of photo description failed: " + err)
+
+                                    return!
+                                        ctx.reply
+                                            "😓 I couldn't turn that photo into a meal log — try /food with a short description."
     }

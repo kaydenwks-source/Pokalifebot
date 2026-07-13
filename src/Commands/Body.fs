@@ -245,20 +245,26 @@ let handleProgress (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
 
                 let! _ = ctx.reply (String.concat "\n" lines)
 
-                // AI insight as a follow-up, cross-referencing calorie intake.
-                ctx.sendChatAction "typing" |> ignore
+                // AI insight as a follow-up, cross-referencing calorie intake —
+                // the measurements above are always free; only this costs budget.
+                match Entitlements.check config.AdminUserId user "progress" with
+                | Error budgetMsg -> return! ctx.reply budgetMsg
+                | Ok() ->
+                    ctx.sendChatAction "typing" |> ignore
 
-                let avgKcal =
-                    let days = Meals.recentDailyTotals user.Id 7
+                    let avgKcal =
+                        let days = Meals.recentDailyTotals user.Id 7
 
-                    if days.Length = 0 then
-                        None
-                    else
-                        Some((days |> Array.sumBy (fun d -> d.Calories)) / days.Length)
+                        if days.Length = 0 then
+                            None
+                        else
+                            Some((days |> Array.sumBy (fun d -> d.Calories)) / days.Length)
 
-                let! analysis = Ai.Progress.analyse config logs user.HeightCm avgKcal
+                    let! analysis = Ai.Progress.analyse config logs user.HeightCm avgKcal
 
-                match analysis with
-                | Ok insight -> return! ctx.reply ("🧠 " + insight.Trim())
-                | Error _ -> return! ctx.reply Common.aiUnavailable
+                    match analysis with
+                    | Ok insight ->
+                        Entitlements.commit config.AdminUserId user "progress"
+                        return! ctx.reply ("🧠 " + insight.Trim())
+                    | Error _ -> return! ctx.reply Common.aiUnavailable
     }

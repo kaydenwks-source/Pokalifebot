@@ -56,54 +56,58 @@ let private showList (user: UserProfile) (ctx: Context) =
 
 let private addGoal (config: Env.AppConfig) (user: UserProfile) (description: string) (ctx: Context) : JS.Promise<obj> =
     promise {
-        ctx.sendChatAction "typing" |> ignore
-        let! parsed = Ai.GoalParser.parse config description
+        match Entitlements.check config.AdminUserId user "goal" with
+        | Error budgetMsg -> return! ctx.reply budgetMsg
+        | Ok() ->
+            ctx.sendChatAction "typing" |> ignore
+            let! parsed = Ai.GoalParser.parse config description
 
-        match parsed with
-        | Error err ->
-            Logger.warn (sprintf "Goal parse failed for %s: %s" user.FirstName err)
+            match parsed with
+            | Error err ->
+                Logger.warn (sprintf "Goal parse failed for %s: %s" user.FirstName err)
 
-            if err.Contains "/target" then
-                return! ctx.reply "For weight goals use /target 68 in 10 weeks — it computes your daily calories too."
-            else
-                return! ctx.reply "🤔 I couldn't read that as a goal. Try: /goal add read 20 books"
-        | Ok p ->
-            let goal = Goals.add user.Id p.Name p.Target p.Unit
-            Logger.info (sprintf "%s added goal: %s (%g %s)" user.FirstName goal.Name goal.TargetValue goal.Unit)
+                if err.Contains "/target" then
+                    return! ctx.reply "For weight goals use /target 68 in 10 weeks — it computes your daily calories too."
+                else
+                    return! ctx.reply "🤔 I couldn't read that as a goal. Try: /goal add read 20 books"
+            | Ok p ->
+                Entitlements.commit config.AdminUserId user "goal"
+                let goal = Goals.add user.Id p.Name p.Target p.Unit
+                Logger.info (sprintf "%s added goal: %s (%g %s)" user.FirstName goal.Name goal.TargetValue goal.Unit)
 
-            // Coach breakdown: big goal -> 5 achievable steps (non-fatal on failure).
-            let! stepsResult = Ai.GoalParser.breakdown config goal.Name goal.TargetValue goal.Unit
+                // Coach breakdown: big goal -> 5 achievable steps (non-fatal on failure).
+                let! stepsResult = Ai.GoalParser.breakdown config goal.Name goal.TargetValue goal.Unit
 
-            let stepsBlock =
-                match stepsResult with
-                | Ok steps ->
-                    Goals.setSteps goal steps |> ignore
+                let stepsBlock =
+                    match stepsResult with
+                    | Ok steps ->
+                        Goals.setSteps goal steps |> ignore
 
-                    "\n\n🧭 Your 5-step path:\n"
-                    + (steps |> Array.mapi (fun i s -> sprintf "%d. %s" (i + 1) s) |> String.concat "\n")
-                | Error err ->
-                    Logger.warn ("Goal breakdown failed: " + err)
-                    ""
+                        "\n\n🧭 Your 5-step path:\n"
+                        + (steps |> Array.mapi (fun i s -> sprintf "%d. %s" (i + 1) s) |> String.concat "\n")
+                    | Error err ->
+                        Logger.warn ("Goal breakdown failed: " + err)
+                        ""
 
-            let unitStr = if goal.Unit = "" then "" else " " + goal.Unit
+                let unitStr = if goal.Unit = "" then "" else " " + goal.Unit
 
-            let index =
-                Goals.forUser user.Id
-                |> Array.findIndex (fun g -> g.Id = goal.Id)
-                |> (+) 1
+                let index =
+                    Goals.forUser user.Id
+                    |> Array.findIndex (fun g -> g.Id = goal.Id)
+                    |> (+) 1
 
-            return!
-                ctx.reply (
-                    sprintf
-                        "🎯 Goal set: %s (%g%s)\n%s 0%%%s\n\nLog progress with /goal log %d <amount> · path anytime: /goal plan %d"
-                        goal.Name
-                        goal.TargetValue
-                        unitStr
-                        (bar 0)
-                        stepsBlock
-                        index
-                        index
-                )
+                return!
+                    ctx.reply (
+                        sprintf
+                            "🎯 Goal set: %s (%g%s)\n%s 0%%%s\n\nLog progress with /goal log %d <amount> · path anytime: /goal plan %d"
+                            goal.Name
+                            goal.TargetValue
+                            unitStr
+                            (bar 0)
+                            stepsBlock
+                            index
+                            index
+                    )
     }
 
 /// /goal plan <n> — the coach's step path with progress-based checkmarks.

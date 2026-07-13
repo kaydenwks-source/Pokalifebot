@@ -91,6 +91,9 @@ let create (config: Env.AppConfig) : Telegraf =
     // Phase 14 — settings (timezone + per-user nudge times)
     bot.command ("settings", Commands.Settings.handle)
 
+    // Phase 19 — AI usage / budget
+    bot.command ("usage", Commands.Account.handleUsage config)
+
     // Last-resort error handler: log the failure but keep the bot running.
     bot.catch (
         System.Func<_, _, _>(fun err ctx ->

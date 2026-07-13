@@ -32,23 +32,28 @@ let handleQuote (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
                         )
                 | None -> user.QuoteCategory, None
 
-            Logger.info (sprintf "/quote (%s) for %s" category user.FirstName)
-            ctx.sendChatAction "typing" |> ignore
+            match Entitlements.check config.AdminUserId user "quote" with
+            | Error budgetMsg -> return! ctx.reply budgetMsg
+            | Ok() ->
+                Logger.info (sprintf "/quote (%s) for %s" category user.FirstName)
+                ctx.sendChatAction "typing" |> ignore
 
-            let! result = Ai.Quotes.generate config category
+                let! result = Ai.Quotes.generate config category
 
-            let text =
-                match result with
-                | Ok quote ->
-                    let extra =
-                        hint
-                        |> Option.map (fun h -> "\n\nℹ️ " + h)
-                        |> Option.defaultValue ""
+                let text =
+                    match result with
+                    | Ok quote ->
+                        Entitlements.commit config.AdminUserId user "quote"
 
-                    sprintf "💪 %s\n\n%s%s" category quote extra
-                | Error _ -> Common.aiUnavailable
+                        let extra =
+                            hint
+                            |> Option.map (fun h -> "\n\nℹ️ " + h)
+                            |> Option.defaultValue ""
 
-            return! ctx.reply text
+                        sprintf "💪 %s\n\n%s%s" category quote extra
+                    | Error _ -> Common.aiUnavailable
+
+                return! ctx.reply text
     }
 
 let private categoryKeyboard =

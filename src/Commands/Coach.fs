@@ -30,24 +30,28 @@ let handle (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
                 CoachHistory.clear user.Id
                 return! ctx.reply "🧠 Fresh start. What's on your mind?"
             | Some message ->
-                Logger.info (sprintf "/coach from %s" user.FirstName)
-                ctx.sendChatAction "typing" |> ignore
+                match Entitlements.check config.AdminUserId user "coach" with
+                | Error budgetMsg -> return! ctx.reply budgetMsg
+                | Ok() ->
+                    Logger.info (sprintf "/coach from %s" user.FirstName)
+                    ctx.sendChatAction "typing" |> ignore
 
-                let context = Reports.weeklyData user
+                    let context = Reports.weeklyData user
 
-                let turns =
-                    Array.append
-                        (CoachHistory.historyFor user.Id |> Array.map (fun m -> m.Role, m.Content))
-                        [| ("user", message) |]
+                    let turns =
+                        Array.append
+                            (CoachHistory.historyFor user.Id |> Array.map (fun m -> m.Role, m.Content))
+                            [| ("user", message) |]
 
-                let! result = Ai.Coach.respond config user context turns
+                    let! result = Ai.Coach.respond config user context turns
 
-                match result with
-                | Ok reply ->
-                    CoachHistory.append user.Id "user" message
-                    CoachHistory.append user.Id "assistant" (reply.Trim())
-                    return! ctx.reply ("🧠 " + reply.Trim())
-                | Error err ->
-                    Logger.error ("Coach failed: " + err)
-                    return! ctx.reply Common.aiUnavailable
+                    match result with
+                    | Ok reply ->
+                        Entitlements.commit config.AdminUserId user "coach"
+                        CoachHistory.append user.Id "user" message
+                        CoachHistory.append user.Id "assistant" (reply.Trim())
+                        return! ctx.reply ("🧠 " + reply.Trim())
+                    | Error err ->
+                        Logger.error ("Coach failed: " + err)
+                        return! ctx.reply Common.aiUnavailable
     }
