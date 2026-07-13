@@ -1,13 +1,13 @@
 {
   "name": "momentum-ai",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "private": true,
   "description": "AI-powered Telegram productivity coach",
   "type": "module",
   "scripts": {
     "build": "dotnet fable src --outDir dist",
-    "start": "node dist/Index.js",
-    "dev": "dotnet fable watch src --outDir dist --run node dist/Index.js"
+    "start": "node --disable-warning=ExperimentalWarning dist/Index.js",
+    "dev": "dotnet fable watch src --outDir dist --run node --disable-warning=ExperimentalWarning dist/Index.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

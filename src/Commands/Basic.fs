@@ -87,7 +87,7 @@ let private helpText =
       "/settings — see everything · /settings timezone +8"
       "/settings morning 07:30 · /settings evening 21:00"
       ""
-      "Coming soon: SQLite storage and more." ]
+      "More coming soon." ]
     |> String.concat "\n"
 
 let private startText name =
@@ -118,4 +118,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 14 (settings)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 15 (SQLite storage)" Env.Version)

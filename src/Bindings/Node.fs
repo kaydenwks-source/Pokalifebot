@@ -13,6 +13,7 @@ type IFs =
     abstract appendFileSync: path: string * data: string -> unit
     abstract readFileSync: path: string * encoding: string -> string
     abstract writeFileSync: path: string * data: string -> unit
+    abstract readdirSync: path: string -> string[]
 
 [<ImportAll("node:fs")>]
 let fs: IFs = jsNative

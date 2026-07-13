@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="Bindings/Node.fs" />
     <Compile Include="Bindings/Cron.fs" />
+    <Compile Include="Bindings/Sqlite.fs" />
     <Compile Include="Utils/Logger.fs" />
     <Compile Include="Utils/Time.fs" />
     <Compile Include="Config/Env.fs" />
