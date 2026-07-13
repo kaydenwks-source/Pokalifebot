@@ -98,6 +98,11 @@ let create (config: Env.AppConfig) : Telegraf =
     bot.command ("export", Commands.Account.handleExport)
     bot.command ("deleteme", Commands.Account.handleDeleteMe)
 
+    // Phase 22 — natural language. Any plain-text message that no command
+    // above handled falls through to the intent router. Registered LAST so
+    // slash-commands always win.
+    bot.on (messageFilter "text", Commands.NaturalLanguage.handle config)
+
     // Last-resort error handler: log the failure but keep the bot running.
     bot.catch (
         System.Func<_, _, _>(fun err ctx ->

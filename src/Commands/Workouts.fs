@@ -22,7 +22,9 @@ let private usage =
       "/workout tips — AI look at your recent training" ]
     |> String.concat "\n"
 
-let private logWorkout (config: Env.AppConfig) (user: UserProfile) (description: string) (ctx: Context) : JS.Promise<obj> =
+/// Public so the natural-language router can log a workout from free text
+/// and reuse the full PR / energy / goal-feed reply.
+let logWorkout (config: Env.AppConfig) (user: UserProfile) (description: string) (ctx: Context) : JS.Promise<obj> =
     promise {
         ctx.sendChatAction "typing" |> ignore
 
