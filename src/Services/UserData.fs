@@ -57,7 +57,8 @@ let export (userId: float) : obj =
           "coach" ==> section "database/coach.json"
           "xp" ==> section "database/xp.json"
           "focus" ==> section "database/focus.json"
-          "journal" ==> section "database/journal.json" ]
+          "journal" ==> section "database/journal.json"
+          "buddy" ==> (Buddies.buddyOf userId |> Option.map box |> Option.defaultValue (box null)) ]
 
 let private deleteWhereUser (d: Sqlite.Database) (table: string) (userId: float) =
     try
@@ -81,5 +82,8 @@ let wipe (userId: float) : unit =
     let d = Storage.database ()
     deleteWhereUser d "ai_usage" userId
     deleteWhereUser d "events" userId
+
+    // Buddy links/invites key on AId/BId/InviterId, not UserId — clean explicitly.
+    Buddies.purgeUser userId
 
     Logger.info (sprintf "Wiped all data for user %.0f" userId)

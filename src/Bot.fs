@@ -103,6 +103,9 @@ let create (config: Env.AppConfig) : Telegraf =
     bot.command ("stats", Commands.Stats.handle)
     bot.command ("level", Commands.Stats.handle)
 
+    // Phase 25 — accountability buddies
+    bot.command ("buddy", Commands.Buddy.handle)
+
     // Phase 20 — data safety: export and account deletion
     bot.command ("export", Commands.Account.handleExport)
     bot.command ("deleteme", Commands.Account.handleDeleteMe)

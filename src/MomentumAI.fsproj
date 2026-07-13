@@ -26,6 +26,7 @@
     <Compile Include="Models/Goal.fs" />
     <Compile Include="Models/Focus.fs" />
     <Compile Include="Models/Reflection.fs" />
+    <Compile Include="Models/Buddy.fs" />
     <Compile Include="Services/Storage.fs" />
     <Compile Include="Services/Users.fs" />
     <Compile Include="Services/Gamification.fs" />
@@ -46,6 +47,7 @@
     <Compile Include="Services/Analytics.fs" />
     <Compile Include="Services/Usage.fs" />
     <Compile Include="Services/Entitlements.fs" />
+    <Compile Include="Services/Buddies.fs" />
     <Compile Include="Services/UserData.fs" />
     <Compile Include="Ai/DeepSeek.fs" />
     <Compile Include="Ai/Quotes.fs" />
@@ -80,6 +82,7 @@
     <Compile Include="Commands/Coach.fs" />
     <Compile Include="Commands/Account.fs" />
     <Compile Include="Commands/Stats.fs" />
+    <Compile Include="Commands/Buddy.fs" />
     <Compile Include="Commands/Focus.fs" />
     <Compile Include="Commands/Journal.fs" />
     <Compile Include="Commands/NaturalLanguage.fs" />
