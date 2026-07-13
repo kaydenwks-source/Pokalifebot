@@ -61,6 +61,7 @@
     <Compile Include="Ai/Reports.fs" />
     <Compile Include="Ai/Coach.fs" />
     <Compile Include="Ai/Router.fs" />
+    <Compile Include="Ai/Timezone.fs" />
     <Compile Include="Commands/Common.fs" />
     <Compile Include="Commands/Basic.fs" />
     <Compile Include="Commands/Onboarding.fs" />

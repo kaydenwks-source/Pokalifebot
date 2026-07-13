@@ -6,7 +6,10 @@
 const Users = await import('../dist/Services/Users.js');
 const Habits = await import('../dist/Services/Habits.js');
 const Onb = await import('../dist/Commands/Onboarding.js');
+const Env = await import('../dist/Config/Env.js');
 const UD = await import('../dist/Services/UserData.js'); // storage-level wipe (SQLite, not .json)
+
+const cfg = Env.load().fields[0]; // handleText needs config (AI timezone fallback)
 
 let failures = 0;
 const check = (label, cond) => {
@@ -21,6 +24,7 @@ const mkCtx = (id) => ({
   reply: () => Promise.resolve({}),
   editMessageText: () => Promise.resolve({}),
   answerCbQuery: () => Promise.resolve({}),
+  sendChatAction: () => Promise.resolve({}),
 });
 
 const FAKE = 999999; // typed-answers path
@@ -35,29 +39,29 @@ check('fresh user needs onboarding', Onb.needsOnboarding(u) === true);
 await Onb.launch(u, ctx);
 check('launch → step 1 pending', Users.find(FAKE).OnboardingStep === 1);
 
-await Onb.handleText(Users.find(FAKE), '+8', ctx);
+await Onb.handleText(cfg, Users.find(FAKE), '+8', ctx);
 u = Users.find(FAKE);
 check('step 1 → timezone set to +8 (480 min)', u.TzOffsetMinutes === 480);
 check('advanced to step 2', u.OnboardingStep === 2);
 
-await Onb.handleText(Users.find(FAKE), 'gym', ctx);
+await Onb.handleText(cfg, Users.find(FAKE), 'gym', ctx);
 u = Users.find(FAKE);
 check('step 2 → habit "gym" tracked', Habits.forUser(FAKE).some((h) => h.Name === 'gym'));
 check('advanced to step 3', u.OnboardingStep === 3);
 
-await Onb.handleText(Users.find(FAKE), '07:00', ctx);
+await Onb.handleText(cfg, Users.find(FAKE), '07:00', ctx);
 u = Users.find(FAKE);
 check('step 3 → daily quote at 07:00', u.QuoteTime === '07:00');
 check('onboarding marked done', u.OnboardingDone === true);
 check('step cleared', u.OnboardingStep == null);
 check('completed user no longer needs onboarding', Onb.needsOnboarding(u) === false);
 
-// A bad offset should NOT advance the step.
+// An unresolvable place should NOT advance the step (AI returns error).
 console.log('--- validation ---');
 let v = Users.upsert(1234567, 1234567, 'Val', undefined);
 await Onb.launch(v, mkCtx(1234567));
-await Onb.handleText(Users.find(1234567), 'banana', mkCtx(1234567));
-check('invalid offset keeps step 1', Users.find(1234567).OnboardingStep === 1);
+await Onb.handleText(cfg, Users.find(1234567), 'qwzxlkj not a place 999', mkCtx(1234567));
+check('unresolvable place keeps step 1', Users.find(1234567).OnboardingStep === 1);
 
 // ── Skip path: tap Skip on every step ─────────────────────────────────
 console.log('--- skip path ---');

@@ -13,6 +13,7 @@ open Bindings.Telegraf
 open Models.User
 open Services
 open Utils
+open Config
 
 /// A single-button inline keyboard used for the "skip this step" option.
 let private skipKeyboard (data: string) (label: string) =
@@ -36,7 +37,7 @@ let private sendStep (userId: float) (step: int) (ctx: Context) : JS.Promise<obj
     match step with
     | 1 ->
         ctx.reply (
-            "🌍 First, what timezone are you in?\n\nReply with your UTC offset — e.g. +8 (Singapore), -5 (New York), 0 (London). This keeps every reminder and daily message on your own clock.",
+            "🌍 First, what country are you in?\n\nJust tell me the country (or a city) — e.g. Singapore, United Kingdom, New York. I'll set your timezone from that so every reminder lands on your own clock.",
             skipKeyboard "onb:skip:1" "Skip for now"
         )
     | 2 ->
@@ -85,20 +86,42 @@ let handleStart (ctx: Context) : JS.Promise<obj> =
 
 /// A typed reply while a step is pending. Called by the natural-language
 /// handler before it reaches the AI router.
-let handleText (user: UserProfile) (text: string) (ctx: Context) : JS.Promise<obj> =
+let handleText (config: Env.AppConfig) (user: UserProfile) (text: string) (ctx: Context) : JS.Promise<obj> =
     let t = text.Trim()
 
     match user.OnboardingStep with
     | Some 1 ->
         match Time.parseUtcOffset t with
         | Some mins ->
+            // They typed a raw offset — take it directly, no AI needed.
             Users.setTimezone user.Id mins
 
             promise {
                 let! _ = ctx.reply (sprintf "🌍 Timezone set to %s." (Time.formatOffset mins))
                 return! sendStep user.Id 2 ctx
             }
-        | None -> ctx.reply "Hmm, that doesn't look like an offset. Try just +8 or -5:30 — or tap Skip above."
+        | None ->
+            // Treat it as a place and let the AI resolve the offset.
+            promise {
+                ctx.sendChatAction "typing" |> ignore
+                let! resolved = Ai.Timezone.resolveOffset config t
+
+                match resolved with
+                | Ok mins ->
+                    Users.setTimezone user.Id mins
+
+                    let! _ =
+                        ctx.reply (
+                            sprintf
+                                "🌍 Got it — timezone set to %s. You can fine-tune it anytime with /settings timezone."
+                                (Time.formatOffset mins)
+                        )
+
+                    return! sendStep user.Id 2 ctx
+                | Error _ ->
+                    return!
+                        ctx.reply "I couldn't place that. Try your country name, a major city, or a UTC offset like +8 — or tap Skip above."
+            }
     | Some 2 ->
         if t = "" || t.Length > 40 then
             ctx.reply "Give me a short habit name (under 40 characters), e.g. gym."

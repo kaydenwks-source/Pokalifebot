@@ -20,7 +20,7 @@ let handle (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
         // Mid-onboarding: the reply belongs to the setup wizard, not the AI
         // router — route it there and skip classification entirely.
         | Some user, Some text when user.OnboardingStep.IsSome && not (text.StartsWith "/") && text.Trim() <> "" ->
-            return! Commands.Onboarding.handleText user text ctx
+            return! Commands.Onboarding.handleText config user text ctx
         | Some user, Some text when not (text.StartsWith "/") && text.Trim() <> "" ->
             match Entitlements.check config.AdminUserId user "nl" with
             | Error budgetMsg -> return! ctx.reply budgetMsg
