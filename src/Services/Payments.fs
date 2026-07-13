@@ -52,11 +52,10 @@ let private append (userId: float) (chargeId: string) (stars: int) (kind: string
     with ex ->
         Logger.error (sprintf "Payments: append failed: %s" ex.Message)
 
-/// Grant (or extend) premium after a successful payment. Records the ledger
-/// row, then sets PremiumUntil to 30 days from whichever is later — today or
-/// the user's current expiry — so renewals *stack* instead of resetting.
-/// Returns the new expiry day ("yyyy-MM-dd").
-let grantPremium (user: Models.User.UserProfile) (chargeId: string) (stars: int) (kind: string) : string =
+/// Core grant: append a ledger row, then set PremiumUntil to `days` from
+/// whichever is later — today or the user's current expiry — so grants *stack*
+/// instead of resetting. Returns the new expiry day ("yyyy-MM-dd").
+let grantFor (user: Models.User.UserProfile) (chargeId: string) (stars: int) (kind: string) (days: int) : string =
     append user.Id chargeId stars kind
 
     let today = System.DateTime.UtcNow.Date
@@ -66,13 +65,28 @@ let grantPremium (user: Models.User.UserProfile) (chargeId: string) (stars: int)
         | Some d when d > today -> d
         | _ -> today
 
-    let until = baseDate.AddDays(float PremiumDays).ToString("yyyy-MM-dd")
+    let until = baseDate.AddDays(float days).ToString("yyyy-MM-dd")
     Users.setPremium user.Id until chargeId
     until
+
+/// Grant (or extend) premium after a successful Stars payment (30 days).
+let grantPremium (user: Models.User.UserProfile) (chargeId: string) (stars: int) (kind: string) : string =
+    grantFor user chargeId stars kind PremiumDays
+
+/// Admin comp: grant premium for N days with NO payment. Recorded as kind
+/// "comp" with a synthetic charge id so the ledger still shows who/when.
+let grantComp (user: Models.User.UserProfile) (adminId: float) (days: int) : string =
+    grantFor user (sprintf "comp:%.0f" adminId) 0 "comp" days
 
 /// Record a refund: append a "refund" row and drop the user back to free.
 let recordRefund (user: Models.User.UserProfile) (chargeId: string) (stars: int) : unit =
     append user.Id chargeId stars "refund"
+    Users.clearPremium user.Id
+
+/// Admin revoke: drop a user to free immediately (no refund — for comps or
+/// abuse). Logged in the ledger for the audit trail.
+let revokeComp (user: Models.User.UserProfile) (adminId: float) : unit =
+    append user.Id (sprintf "revoke:%.0f" adminId) 0 "revoke"
     Users.clearPremium user.Id
 
 /// A user's payment history, newest first — used by /export.
