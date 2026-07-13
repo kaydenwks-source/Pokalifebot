@@ -12,11 +12,52 @@
 module Commands.NaturalLanguage
 
 open Fable.Core
+open Fable.Core.JsInterop
 open Bindings.Telegraf
 open Models.User
 open Services
 open Utils
 open Config
+
+/// Overwrite the incoming message text so an existing command handler parses
+/// it exactly as if the user had typed the whole command.
+[<Emit("$0.message.text = $1")>]
+let private setMessageText (ctx: Context) (value: string) : unit = jsNative
+
+/// A tapped menu "input" action (Phase 28 force-reply) stored a pending token;
+/// this message is the value the user typed. Rebuild the equivalent command
+/// line and hand it to the real handler — no AI classification needed.
+let private dispatchPending
+    (config: Env.AppConfig)
+    (userId: float)
+    (token: string)
+    (text: string)
+    (ctx: Context)
+    : JS.Promise<obj> =
+    Users.clearPendingInput userId
+
+    let run (cmdLine: string) (handler: Context -> JS.Promise<obj>) =
+        setMessageText ctx cmdLine
+        handler ctx
+
+    match token with
+    | "sleeplog" -> run ("/sleep " + text) (Sleep.handle config)
+    | "food" -> run ("/food " + text) (Food.handleFood config)
+    | "weight" -> run ("/weight " + text) Body.handleWeight
+    | "target" -> run ("/target " + text) Body.handleTarget
+    | "goaladd" -> run ("/goal add " + text) (Goals.handle config)
+    | "goallog" -> run ("/goal log " + text) (Goals.handle config)
+    | "remind" -> run ("/remind " + text) (Reminders.handleRemind config)
+    | "habitadd" -> run ("/habit add " + text) (Habits.handle config)
+    | "habitdone" -> run ("/habit done " + text) (Habits.handle config)
+    | "taskadd" -> run ("/task add " + text) Tasks.handleTask
+    | "workoutlog" -> run ("/workout " + text) (Workouts.handle config)
+    | "coach" -> run ("/coach " + text) (Coach.handle config)
+    | "quotetime" -> run ("/quotetime " + text) Quotes.handleQuoteTime
+    | "focus" -> run ("/focus " + text) Focus.handle
+    | "mood" -> run ("/mood " + text) Journal.handleMood
+    | "buddyaccept" -> run ("/buddy accept " + text) Buddy.handle
+    | _ -> ctx.reply "Okay, cancelled. Tap /menu anytime."
 
 /// Route a piece of user text (typed or transcribed) to the right tracker.
 /// Handles the onboarding intercept first, then the AI budget + classifier.
@@ -26,6 +67,9 @@ let route (config: Env.AppConfig) (user: UserProfile) (text: string) (ctx: Conte
         // tracker command — hand it to the wizard and skip classification.
         if user.OnboardingStep.IsSome then
             return! Commands.Onboarding.handleText config user text ctx
+        // A menu input action was tapped: this text is that action's value.
+        elif user.PendingInput.IsSome then
+            return! dispatchPending config user.Id user.PendingInput.Value text ctx
         else
             match Entitlements.check config.AdminUserId user "nl" with
             | Error budgetMsg -> return! ctx.reply budgetMsg

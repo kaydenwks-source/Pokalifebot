@@ -24,7 +24,8 @@ type UserProfile =
       OnboardingDone: bool option // Some true once first-run setup finished
       Tier: string option // "premium" while active; None/"free" otherwise
       PremiumUntil: string option // "yyyy-MM-dd"; premium stays live (plus grace) until this day
-      StarsChargeId: string option } // last successful Stars charge id, kept for refunds
+      StarsChargeId: string option // last successful Stars charge id, kept for refunds
+      PendingInput: string option } // a menu "input" action was tapped; next message is its value
 
 module Categories =
     let all =

@@ -52,7 +52,8 @@ let upsert (id: float) (chatId: float) (firstName: string) (username: string opt
               OnboardingDone = None
               Tier = None
               PremiumUntil = None
-              StarsChargeId = None }
+              StarsChargeId = None
+              PendingInput = None }
 
         saveAll (Array.append users [| fresh |])
         Logger.info (sprintf "New user registered: %s (id %.0f)" firstName id)
@@ -137,6 +138,14 @@ let clearPremium (id: float) =
         { u with
             Tier = None
             PremiumUntil = None })
+
+/// A menu "input" action was tapped: remember which one, so the user's next
+/// message is routed to it as the value. Cleared once consumed.
+let setPendingInput (id: float) (token: string) =
+    update id (fun u -> { u with PendingInput = Some token })
+
+let clearPendingInput (id: float) =
+    update id (fun u -> { u with PendingInput = None })
 
 /// Users who opted into the daily scheduled quote.
 let withDailyQuote () : UserProfile[] =

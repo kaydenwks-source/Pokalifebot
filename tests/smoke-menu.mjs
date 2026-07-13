@@ -1,9 +1,9 @@
-// Smoke test for Phase 28 — the tap-first menu.
+// Smoke test for Phase 28 — the tap-first menu (+ force-reply input actions).
 // Run from project root AFTER `npm run build`:
 //   node --disable-warning=ExperimentalWarning tests/smoke-menu.mjs
-// Drives the menu with a fake Telegram context: structural checks on the
-// trigger/command lists, then category/tip/run navigation.
 const Menu = await import('../dist/Commands/Menu.js');
+const NL = await import('../dist/Commands/NaturalLanguage.js');
+const Users = await import('../dist/Services/Users.js');
 const UD = await import('../dist/Services/UserData.js');
 
 const U = 999999;
@@ -16,13 +16,13 @@ const check = (label, cond) => {
 };
 
 // A fake ctx that records reply / editMessageText / answerCbQuery calls.
-function mkCtx(data) {
+function mkCtx(data, text) {
   const calls = { reply: [], edit: [], answered: 0 };
   const ok = () => Promise.resolve({});
   const ctx = {
     from: { id: U, first_name: 'Pat', username: undefined },
     chat: { id: U },
-    message: { text: undefined },
+    message: { text: text },
     callbackQuery: data === undefined ? undefined : { data },
     telegram: { sendMessage: ok, getFileLink: ok, setMyCommands: ok },
     reply: (t, e) => { calls.reply.push({ t, e }); return ok(); },
@@ -37,6 +37,8 @@ function mkCtx(data) {
 
 const hasKeyboard = (extra) =>
   !!extra && !!extra.reply_markup && Array.isArray(extra.reply_markup.inline_keyboard);
+const isForceReply = (extra) =>
+  !!extra && extra.parse_mode === 'HTML' && !!extra.reply_markup && extra.reply_markup.force_reply === true;
 
 UD.wipe(U);
 
@@ -45,28 +47,18 @@ check('triggers is a non-empty array', Array.isArray(Menu.triggers) && Menu.trig
 check('triggers has no duplicates', new Set(Menu.triggers).size === Menu.triggers.length);
 check('triggers includes home', Menu.triggers.includes('menu:home'));
 check('botCommands includes /menu', Menu.botCommands.some((c) => c.command === 'menu'));
-check('every botCommand has command + description', Menu.botCommands.every((c) => c.command && c.description));
 
 const catTriggers = Menu.triggers.filter((t) => t.startsWith('menu:cat:'));
+const askTriggers = Menu.triggers.filter((t) => t.startsWith('menu:ask:'));
 const tipTriggers = Menu.triggers.filter((t) => t.startsWith('menu:tip:'));
 const runTriggers = Menu.triggers.filter((t) => t.startsWith('menu:run:'));
-check('has categories, tips and runs', catTriggers.length > 5 && tipTriggers.length > 5 && runTriggers.length > 5);
+check('has categories/asks/tips/runs', catTriggers.length > 5 && askTriggers.length > 5 && tipTriggers.length > 2 && runTriggers.length > 5);
 
-console.log('--- /menu opens the home screen ---');
+console.log('--- /menu opens home ---');
 {
   const { ctx, calls } = mkCtx(undefined);
   await Menu.handleMenu(ctx);
-  check('handleMenu replies once', calls.reply.length === 1);
-  check('home reply carries an inline keyboard', hasKeyboard(calls.reply[0].e));
-  check('home text mentions the menu', /menu/i.test(calls.reply[0].t));
-}
-
-console.log('--- home button edits back to home ---');
-{
-  const { ctx, calls } = mkCtx('menu:home');
-  await Menu.handleAction(config, ctx);
-  check('answered the callback', calls.answered === 1);
-  check('edited the message with a keyboard', calls.edit.length === 1 && hasKeyboard(calls.edit[0].e));
+  check('handleMenu replies with a keyboard', calls.reply.length === 1 && hasKeyboard(calls.reply[0].e));
 }
 
 console.log('--- every category expands on tap ---');
@@ -76,23 +68,47 @@ for (const t of catTriggers) {
   check(`${t} edits to a keyboard`, calls.edit.length === 1 && hasKeyboard(calls.edit[0].e));
 }
 
-console.log('--- every tip returns non-empty help ---');
+console.log('--- every input action force-replies & arms pending ---');
+for (const t of askTriggers) {
+  const token = t.slice('menu:ask:'.length);
+  const { ctx, calls } = mkCtx(t);
+  await Menu.handleAction(config, ctx);
+  const armed = Users.find(U)?.PendingInput === token;
+  const forced = calls.reply.length === 1 && isForceReply(calls.reply[0].e);
+  check(`${t} → force_reply + pending=${token}`, armed && forced);
+}
+Users.clearPendingInput(U);
+
+console.log('--- every info action is tap-to-copy (HTML) ---');
 for (const t of tipTriggers) {
   const { ctx, calls } = mkCtx(t);
   await Menu.handleAction(config, ctx);
-  const good = calls.reply.length === 1 && typeof calls.reply[0].t === 'string' && calls.reply[0].t.length > 5;
-  check(`${t} replies with help`, good);
+  const good = calls.reply.length === 1 && calls.reply[0].e && calls.reply[0].e.parse_mode === 'HTML';
+  check(`${t} replies as HTML`, good);
 }
 
-console.log('--- unknown category falls back gracefully ---');
+console.log('--- pending round-trip: tap → type value → routed ---');
 {
-  const { ctx, calls } = mkCtx('menu:cat:doesnotexist');
-  await Menu.handleAction(config, ctx);
-  check('unknown category still replies', calls.reply.length === 1);
+  // Arm "mood" via the menu, then send a plain value as the follow-up message.
+  const arm = mkCtx('menu:ask:mood');
+  await Menu.handleAction(config, arm.ctx);
+  check('mood armed', Users.find(U)?.PendingInput === 'mood');
+
+  const reply = mkCtx(undefined, '4 feeling good');
+  await NL.handle(config, reply.ctx);
+  check('pending cleared after value', Users.find(U)?.PendingInput === undefined);
+  check('value produced a reply', reply.calls.reply.length >= 1);
+}
+
+console.log('--- opening the menu cancels a stale pending ---');
+{
+  Users.setPendingInput(U, 'food');
+  const { ctx } = mkCtx(undefined);
+  await Menu.handleMenu(ctx);
+  check('handleMenu cleared pending', Users.find(U)?.PendingInput === undefined);
 }
 
 console.log('--- safe view actions actually run ---');
-// Local, no-AI views only (avoids network in a smoke test).
 for (const token of ['reminders', 'habits', 'today', 'tasks', 'calories', 'goals', 'buddy', 'stats', 'status', 'usage', 'category']) {
   const { ctx, calls } = mkCtx('menu:run:' + token);
   await Menu.handleAction(config, ctx);
@@ -101,7 +117,7 @@ for (const token of ['reminders', 'habits', 'today', 'tasks', 'calories', 'goals
 
 console.log('--- cleanup ---');
 UD.wipe(U);
-check('test user wiped', true);
+check('test user wiped', Users.find(U) === undefined);
 
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

@@ -1,22 +1,25 @@
 /// Interactive, tap-first menu (Phase 28). /menu shows category buttons; each
-/// category expands, in place, to its actions. "View" actions run the real
-/// command handler immediately (Common.commandArg returns None on a button
-/// press, so they behave as their no-arg default); "input" actions reply with
-/// a short, copy-ready example of what to send. This module also owns the
-/// command list registered for Telegram's native /-autocomplete.
+/// category expands, in place, to its actions. Three leaf kinds:
+///   • Run  — tapping runs a no-arg view via the real handler (Common.commandArg
+///            returns None on a button press, so it behaves as its default).
+///   • Ask  — tapping asks for a single value with force_reply, then the user's
+///            typed reply is routed to the command (Users.PendingInput +
+///            NaturalLanguage.dispatchPending).
+///   • Info — tapping shows tap-to-copy example commands (HTML <code>).
+/// This module also owns the list registered for native /-autocomplete.
 module Commands.Menu
 
 open Fable.Core
 open Fable.Core.JsInterop
 open Bindings.Telegraf
+open Services
 open Config
 
 // ── Menu model ─────────────────────────────────────────────────────────────
 type Leaf =
-    /// Tapping runs a no-arg view via the real handler (token → runLeaf).
     | Run of label: string * token: string
-    /// Tapping shows how to use a command that needs typed input.
-    | Tip of label: string * token: string * help: string
+    | Ask of label: string * token: string * prompt: string
+    | Info of label: string * token: string * help: string
 
 type Category =
     { Id: string
@@ -29,85 +32,70 @@ let private categories: Category list =
         Leaves =
           [ Run("✨ Get a quote", "quote")
             Run("🏷 Choose category", "category")
-            Tip(
-                "⏰ Daily quote time",
-                "quotetime",
-                "⏰ Get a quote every morning:\n/quotetime 07:00\n(or /quotetime off to stop)"
-            ) ] }
+            Ask("⏰ Daily quote time", "quotetime", "⏰ Reply with a time for your daily quote, e.g. <code>07:00</code> (or <code>off</code>).") ] }
       { Id = "sleep"
         Title = "😴 Sleep"
         Leaves =
-          [ Tip(
-                "🛏 Log sleep",
-                "sleeplog",
-                "🛏 Log last night — send:\n/sleep 23:30 07:00\n(bedtime, then wake time)\n\nOr just tell me: “slept 11pm woke 7am”."
-            )
-            Tip("📊 Sleep stats", "sleepstats", "📊 Review your sleep:\n/sleep stats  ·  /sleep today  ·  /sleep history") ] }
+          [ Ask("🛏 Log sleep", "sleeplog", "🛏 Reply with bedtime &amp; wake time, e.g. <code>23:30 07:00</code>.")
+            Info("📊 Sleep stats", "sleepstats", "📊 Review your sleep:\n<code>/sleep stats</code> · <code>/sleep today</code> · <code>/sleep history</code>") ] }
       { Id = "remind"
         Title = "⏰ Reminders"
         Leaves =
           [ Run("📋 My reminders", "reminders")
-            Tip(
-                "➕ Set a reminder",
-                "remind",
-                "⏰ Plain English works — send:\n/remind every monday 8am gym\n/remind tomorrow 3pm call mum"
-            ) ] }
+            Ask("➕ Set a reminder", "remind", "⏰ Reply in plain English, e.g. <code>every monday 8am gym</code>.") ] }
       { Id = "habits"
         Title = "🔥 Habits"
         Leaves =
           [ Run("📋 My habits", "habits")
-            Tip("➕ Add a habit", "habitadd", "🔥 Start tracking:\n/habit add read daily\n(daily · weekly · monthly)")
-            Tip("✅ Mark one done", "habitdone", "✅ Check one off:\n/habit done read\n\nOr just say “reading done”.") ] }
+            Ask("➕ Add a habit", "habitadd", "🔥 Reply with a habit to track, e.g. <code>read daily</code> (daily · weekly · monthly).")
+            Ask("✅ Mark one done", "habitdone", "✅ Reply with the habit name, e.g. <code>read</code>.") ] }
       { Id = "planner"
         Title = "📝 Planner"
         Leaves =
           [ Run("📅 Today", "today")
             Run("🗒 My tasks", "tasks")
             Run("🤖 AI plan my day", "plan")
-            Tip("➕ Add a task", "taskadd", "📝 Add a task:\n/task add buy milk !high @18:00\n(!high/!low priority, @time optional)") ] }
+            Ask("➕ Add a task", "taskadd", "📝 Reply with the task, e.g. <code>buy milk !high @18:00</code> (!high/!low and @time optional).") ] }
       { Id = "food"
         Title = "🍽 Calories"
         Leaves =
           [ Run("📊 Today's calories", "calories")
-            Tip(
-                "🍽 Log food",
-                "food",
-                "🍽 Log a meal:\n/food chicken rice and a coke\n\n📸 Or send a photo of your plate — or just say what you ate."
-            ) ] }
+            Ask("🍽 Log food", "food", "🍽 Reply with what you ate, e.g. <code>chicken rice and a coke</code>.\n📸 Or just send a photo of your plate.") ] }
       { Id = "body"
         Title = "⚖️ Body"
         Leaves =
           [ Run("📈 My progress", "progress")
-            Tip("⚖️ Log measurements", "weight", "⚖️ Log body stats:\n/weight 72.5  ·  /bodyfat 18  ·  /height 175")
-            Tip("🎯 Set a target", "target", "🎯 Set a weight goal:\n/target 68 in 10 weeks") ] }
+            Ask("⚖️ Log weight", "weight", "⚖️ Reply with your weight in kg, e.g. <code>72.5</code>.")
+            Ask("🎯 Set a target", "target", "🎯 Reply with your goal, e.g. <code>68 in 10 weeks</code>.")
+            Info("📏 Body fat / height", "bodyhw", "📏 <code>/bodyfat 18</code> · <code>/height 175</code>") ] }
       { Id = "workouts"
         Title = "🏋️ Workouts"
         Leaves =
-          [ Tip("🏋️ Log a workout", "workoutlog", "🏋️ Plain words are fine:\n/workout bench press 3x8 60kg\n/workout ran 5km")
-            Tip("📊 History & PRs", "workouthist", "📊 Look back:\n/workout history  ·  /workout prs  ·  /workout tips") ] }
+          [ Ask("🏋️ Log a workout", "workoutlog", "🏋️ Reply with your workout, e.g. <code>bench press 3x8 60kg</code> or <code>ran 5km</code>.")
+            Info("📊 History & PRs", "workouthist", "📊 <code>/workout history</code> · <code>/workout prs</code> · <code>/workout tips</code>") ] }
       { Id = "goals"
         Title = "🎯 Goals"
         Leaves =
           [ Run("📋 My goals", "goals")
-            Tip("➕ Add a goal", "goaladd", "🎯 Set any goal — I'll break it down:\n/goal add read 20 books\n/goal add run 10km")
-            Tip("📈 Log progress", "goallog", "📈 Update a goal (number from /goals):\n/goal log 1 3") ] }
+            Ask("➕ Add a goal", "goaladd", "🎯 Reply with your goal — I'll break it down, e.g. <code>read 20 books</code> or <code>run 10km</code>.")
+            Ask("📈 Log progress", "goallog", "📈 Reply with the goal number (from /goals) then the amount, e.g. <code>1 3</code>.") ] }
       { Id = "reports"
         Title = "📊 Reports"
         Leaves =
           [ Run("🗓 Weekly review", "report")
-            Tip("📅 Monthly deep-dive", "reportmonth", "📅 30-day deep-dive + productivity score:\n/report month\n(Premium — see /premium)") ] }
+            Info("📅 Monthly deep-dive", "reportmonth", "📅 <code>/report month</code> — 30-day deep-dive + productivity score (Premium — see /premium).") ] }
       { Id = "mind"
         Title = "🧠 Coach & focus"
         Leaves =
-          [ Tip("🧠 Talk to your coach", "coach", "🧠 I'm listening — send:\n/coach I feel unmotivated today")
-            Tip("🍅 Focus timer", "focus", "🍅 Start a Pomodoro:\n/focus 25\n(I'll ping you when it's up)")
-            Tip("🙂 Mood & journal", "mood", "🙂 Check in:\n/mood 4 feeling good  ·  /journal <your thoughts>") ] }
+          [ Ask("🧠 Talk to your coach", "coach", "🧠 I'm listening — reply with what's on your mind, e.g. <code>I feel unmotivated today</code>.")
+            Ask("🍅 Focus timer", "focus", "🍅 Reply with minutes for a Pomodoro, e.g. <code>25</code>. I'll ping you when it's up.")
+            Ask("🙂 Log mood", "mood", "🙂 Reply with 1–5 and an optional note, e.g. <code>4 feeling good</code>.") ] }
       { Id = "buddy"
         Title = "🤝 Buddy"
         Leaves =
           [ Run("👥 My buddy", "buddy")
-            Tip("🔗 Invite a buddy", "buddyinvite", "🔗 Get a code to share:\n/buddy invite")
-            Tip("🤝 Accept a code", "buddyaccept", "🤝 Pair up with a friend's code:\n/buddy accept ABC123") ] }
+            Info("🔗 Invite a buddy", "buddyinvite", "🔗 Send <code>/buddy invite</code> — I'll give you a code to share.")
+            Ask("🤝 Accept a code", "buddyaccept", "🤝 Reply with your friend's code, e.g. <code>ABC123</code>.") ] }
       { Id = "account"
         Title = "⭐ Premium & you"
         Leaves =
@@ -115,13 +103,13 @@ let private categories: Category list =
             Run("📋 My plan", "status")
             Run("⭐ Get Premium", "premium")
             Run("📊 AI usage", "usage")
-            Tip("⚙️ Settings", "settings", "⚙️ Preferences:\n/settings — see everything\n/settings timezone, morning, evening…")
-            Tip("🔐 Your data", "data", "🔐 It's yours:\n/export — download everything\n/deleteme — erase everything") ] }
+            Info("⚙️ Settings", "settings", "⚙️ <code>/settings</code> — see everything; also timezone, morning &amp; evening times.")
+            Info("🔐 Your data", "data", "🔐 It's yours: <code>/export</code> to download, <code>/deleteme</code> to erase.") ] }
       { Id = "basics"
         Title = "ℹ️ Basics"
         Leaves =
-          [ Tip("📖 All commands", "help", "📖 Full command list: send /help")
-            Tip("🏓 Is the bot alive?", "ping", "🏓 Send /ping to check.") ] } ]
+          [ Info("📖 All commands", "help", "📖 Send <code>/help</code> for the full command list.")
+            Info("🏓 Is the bot alive?", "ping", "🏓 Send <code>/ping</code> to check.") ] } ]
 
 // ── Rendering ──────────────────────────────────────────────────────────────
 let private homeText =
@@ -132,6 +120,13 @@ let private button (text: string) (data: string) : obj =
 
 let private keyboardExtra (rows: obj[][]) : obj =
     createObj [ "reply_markup" ==> createObj [ "inline_keyboard" ==> rows ] ]
+
+/// force_reply focuses the user's text box; HTML makes the <code> example
+/// tap-to-copy.
+let private askExtra: obj =
+    createObj [ "parse_mode" ==> "HTML"; "reply_markup" ==> createObj [ "force_reply" ==> true ] ]
+
+let private htmlExtra: obj = createObj [ "parse_mode" ==> "HTML" ]
 
 let private homeKeyboard () : obj =
     categories
@@ -144,7 +139,8 @@ let private homeKeyboard () : obj =
 let private leafButton (leaf: Leaf) : obj =
     match leaf with
     | Run (label, token) -> button label ("menu:run:" + token)
-    | Tip (label, token, _) -> button label ("menu:tip:" + token)
+    | Ask (label, token, _) -> button label ("menu:ask:" + token)
+    | Info (label, token, _) -> button label ("menu:tip:" + token)
 
 let private categoryKeyboard (c: Category) : obj =
     let leafRows =
@@ -154,10 +150,30 @@ let private categoryKeyboard (c: Category) : obj =
 
 // ── Command entry point ────────────────────────────────────────────────────
 let handleMenu (ctx: Context) : JS.Promise<obj> =
-    Common.ensureUser ctx |> ignore
+    // Opening the menu cancels any half-finished "tap an input action" prompt.
+    match Common.ensureUser ctx with
+    | Some u when u.PendingInput.IsSome -> Users.clearPendingInput u.Id
+    | _ -> ()
+
     ctx.reply (homeText, homeKeyboard ())
 
 // ── Callback dispatch ──────────────────────────────────────────────────────
+let private allLeaves = categories |> List.collect (fun c -> c.Leaves)
+
+let private askPrompt (token: string) : string option =
+    allLeaves
+    |> List.tryPick (fun leaf ->
+        match leaf with
+        | Ask (_, t, prompt) when t = token -> Some prompt
+        | _ -> None)
+
+let private infoHelp (token: string) : string option =
+    allLeaves
+    |> List.tryPick (fun leaf ->
+        match leaf with
+        | Info (_, t, help) when t = token -> Some help
+        | _ -> None)
+
 /// Run a no-arg view by invoking its real handler. Common.commandArg returns
 /// None on a callback, so each behaves as its default (e.g. /calories = today).
 let private runLeaf (config: Env.AppConfig) (token: string) (ctx: Context) : JS.Promise<obj> =
@@ -180,17 +196,15 @@ let private runLeaf (config: Env.AppConfig) (token: string) (ctx: Context) : JS.
     | "usage" -> Account.handleUsage config ctx
     | _ -> ctx.reply "Hmm, I don't recognise that action — try /menu again."
 
-let private tipText (token: string) : string option =
-    categories
-    |> List.collect (fun c -> c.Leaves)
-    |> List.tryPick (fun leaf ->
-        match leaf with
-        | Tip (_, t, help) when t = token -> Some help
-        | _ -> None)
-
-let private prefix = "menu:"
 let private startsWith (p: string) (s: string) = s.StartsWith p
 let private after (p: string) (s: string) = s.Substring p.Length
+
+/// Cancel a stale pending input when the user taps anything other than a fresh
+/// input prompt, so a forgotten "tap-to-log" can't hijack their next message.
+let private cancelPendingIfAny (ctx: Context) =
+    match Common.ensureUser ctx with
+    | Some u when u.PendingInput.IsSome -> Users.clearPendingInput u.Id
+    | _ -> ()
 
 /// One handler for every menu button (registered per-token in Bot.fs).
 let handleAction (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
@@ -199,22 +213,34 @@ let handleAction (config: Env.AppConfig) (ctx: Context) : JS.Promise<obj> =
 
     ctx.answerCbQuery () |> ignore // dismiss the button's loading spinner
 
-    if data = "menu:home" then
-        ctx.editMessageText (homeText, homeKeyboard ())
-    elif startsWith "menu:cat:" data then
-        let id = after "menu:cat:" data
+    if startsWith "menu:ask:" data then
+        // Remember which input the user wants to give, then focus their keyboard.
+        let token = after "menu:ask:" data
 
-        match categories |> List.tryFind (fun c -> c.Id = id) with
-        | Some c -> ctx.editMessageText (c.Title + "\n\nTap an action:", categoryKeyboard c)
-        | None -> ctx.reply "That section vanished — try /menu again."
-    elif startsWith "menu:run:" data then
-        runLeaf config (after "menu:run:" data) ctx
-    elif startsWith "menu:tip:" data then
-        match tipText (after "menu:tip:" data) with
-        | Some help -> ctx.reply help
-        | None -> ctx.reply "Try /menu."
+        match Common.ensureUser ctx, askPrompt token with
+        | Some u, Some prompt ->
+            Users.setPendingInput u.Id token
+            ctx.reply (prompt, askExtra)
+        | _ -> ctx.reply "Try /menu again."
     else
-        ctx.reply "Try /menu."
+        cancelPendingIfAny ctx
+
+        if data = "menu:home" then
+            ctx.editMessageText (homeText, homeKeyboard ())
+        elif startsWith "menu:cat:" data then
+            let id = after "menu:cat:" data
+
+            match categories |> List.tryFind (fun c -> c.Id = id) with
+            | Some c -> ctx.editMessageText (c.Title + "\n\nTap an action:", categoryKeyboard c)
+            | None -> ctx.reply "That section vanished — try /menu again."
+        elif startsWith "menu:run:" data then
+            runLeaf config (after "menu:run:" data) ctx
+        elif startsWith "menu:tip:" data then
+            match infoHelp (after "menu:tip:" data) with
+            | Some help -> ctx.reply (help, htmlExtra)
+            | None -> ctx.reply "Try /menu."
+        else
+            ctx.reply "Try /menu."
 
 /// Every callback_data string the menu can emit — Bot.fs registers one action
 /// per string, all routed to handleAction. A real array so JS callers (tests)
@@ -227,7 +253,8 @@ let triggers: string[] =
            for leaf in c.Leaves do
                match leaf with
                | Run (_, t) -> yield "menu:run:" + t
-               | Tip (_, t, _) -> yield "menu:tip:" + t |]
+               | Ask (_, t, _) -> yield "menu:ask:" + t
+               | Info (_, t, _) -> yield "menu:tip:" + t |]
 
 // ── Native command autocomplete (setMyCommands) ────────────────────────────
 /// The list Telegram shows in its ☰ menu button and /-autocomplete. Registered
