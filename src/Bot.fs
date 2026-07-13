@@ -99,6 +99,14 @@ let create (config: Env.AppConfig) : Telegraf =
     // Phase 19 — AI usage / budget
     bot.command ("usage", Commands.Account.handleUsage config)
 
+    // Phase 26 — premium (Telegram Stars). /premium offers the subscription;
+    // the two payment updates below grant it. Only the trusted, server-side
+    // successful_payment ever flips a user to premium.
+    bot.command ("premium", Commands.Premium.handle config)
+    bot.command ("status", Commands.Premium.handleStatus config)
+    bot.on ("pre_checkout_query", Commands.Premium.handlePreCheckout)
+    bot.on (messageFilter "successful_payment", Commands.Premium.handleSuccessfulPayment config)
+
     // Phase 23 — gamification
     bot.command ("stats", Commands.Stats.handle)
     bot.command ("level", Commands.Stats.handle)

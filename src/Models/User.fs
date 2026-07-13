@@ -21,7 +21,10 @@ type UserProfile =
       FreezeWeek: int option // ISO-week index a streak-freeze was last used; None = never
       GamificationEnabled: bool option // XP/levels/badges; None = default ON
       OnboardingStep: int option // the setup step awaiting a reply; None = not mid-onboarding
-      OnboardingDone: bool option } // Some true once first-run setup finished
+      OnboardingDone: bool option // Some true once first-run setup finished
+      Tier: string option // "premium" while active; None/"free" otherwise
+      PremiumUntil: string option // "yyyy-MM-dd"; premium stays live (plus grace) until this day
+      StarsChargeId: string option } // last successful Stars charge id, kept for refunds
 
 module Categories =
     let all =

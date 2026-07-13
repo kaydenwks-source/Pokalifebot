@@ -14,6 +14,11 @@ open Utils
 [<Literal>]
 let FreeDailyAiCap = 25
 
+/// Days we keep premium features live past PremiumUntil, so a renewal that is
+/// a day or two late doesn't abruptly downgrade the user (design §8).
+[<Literal>]
+let GraceDays = 3
+
 /// A user's current local day drives the reset — Phase 14 timezones mean the
 /// budget refreshes at *their* midnight, not the server's.
 let private today (user: UserProfile) =
@@ -25,10 +30,23 @@ let isExempt (adminId: float option) (user: UserProfile) =
     | Some a -> user.Id = a
     | None -> false
 
-/// May this user spend one AI call? Ok to proceed, or Error with a kind,
-/// user-facing message pointing at the midnight reset.
-let check (adminId: float option) (user: UserProfile) (_feature: string) : Result<unit, string> =
+/// Is this user premium *right now*? Admin is always premium. Otherwise the
+/// tier must be "premium" and today (their local day) must still be within the
+/// PremiumUntil date plus the grace window.
+let isPremium (adminId: float option) (user: UserProfile) : bool =
     if isExempt adminId user then
+        true
+    else
+        match user.Tier, user.PremiumUntil |> Option.bind Time.parseDay with
+        | Some "premium", Some until ->
+            let localDay = (Time.userNow user.TzOffsetMinutes).Date
+            localDay <= until.AddDays(float GraceDays)
+        | _ -> false
+
+/// May this user spend one AI call? Ok to proceed, or Error with a kind,
+/// user-facing message. Premium (and admin) are never capped.
+let check (adminId: float option) (user: UserProfile) (_feature: string) : Result<unit, string> =
+    if isPremium adminId user then
         Ok()
     else
         let used = Usage.dayTotal user.Id (today user)
@@ -36,7 +54,7 @@ let check (adminId: float option) (user: UserProfile) (_feature: string) : Resul
         if used >= FreeDailyAiCap then
             Error(
                 sprintf
-                    "🫶 That's all %d of today's AI requests used up. Your trackers still work normally — the AI features refresh at midnight your time. (Higher limits are coming with Premium.)"
+                    "🫶 That's all %d of today's free AI requests used up. Your trackers still work normally — the AI features refresh at midnight your time. Want no limits? /premium unlocks unlimited AI."
                     FreeDailyAiCap
             )
         else
@@ -44,13 +62,14 @@ let check (adminId: float option) (user: UserProfile) (_feature: string) : Resul
 
 /// Record one *successful* AI call. Call this only after the AI actually
 /// replied, so a failed request never costs the user part of their budget.
+/// Premium/admin users aren't metered.
 let commit (adminId: float option) (user: UserProfile) (feature: string) : unit =
-    if not (isExempt adminId user) then
+    if not (isPremium adminId user) then
         Usage.incr user.Id (today user) feature
 
-/// Requests left today: None = unlimited (admin), Some n otherwise.
+/// Requests left today: None = unlimited (premium/admin), Some n otherwise.
 let remaining (adminId: float option) (user: UserProfile) : int option =
-    if isExempt adminId user then
+    if isPremium adminId user then
         None
     else
         Some(max 0 (FreeDailyAiCap - Usage.dayTotal user.Id (today user)))

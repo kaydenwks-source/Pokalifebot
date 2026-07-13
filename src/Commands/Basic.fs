@@ -92,6 +92,10 @@ let private helpText =
       "/focus status · /focus stop — check or end the current session"
       "/mood 4 [note] — log how you feel (1–5) · /journal <text> — reflect"
       ""
+      "⭐ Premium"
+      "/premium — unlock unlimited AI + photo food logging + monthly deep-dives"
+      "/status — your current plan and what's included"
+      ""
       "💬 Or just talk to me — no command needed"
       "\"ate chicken rice\" · \"slept 1am woke 8am\" · \"weighed 72\" · \"gym done\""
       "🎙 …or send a voice note — I'll transcribe and log it."
@@ -134,4 +138,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 25 (accountability buddies)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 26 (premium)" Env.Version)

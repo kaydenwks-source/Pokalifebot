@@ -49,7 +49,10 @@ let upsert (id: float) (chatId: float) (firstName: string) (username: string opt
               FreezeWeek = None
               GamificationEnabled = None
               OnboardingStep = None
-              OnboardingDone = None }
+              OnboardingDone = None
+              Tier = None
+              PremiumUntil = None
+              StarsChargeId = None }
 
         saveAll (Array.append users [| fresh |])
         Logger.info (sprintf "New user registered: %s (id %.0f)" firstName id)
@@ -117,6 +120,23 @@ let completeOnboarding (id: float) =
         { u with
             OnboardingStep = None
             OnboardingDone = Some true })
+
+/// Grant/extend premium: mark the tier, set the new expiry day, and store the
+/// Stars charge id (needed later for a refund).
+let setPremium (id: float) (until: string) (chargeId: string) =
+    update id (fun u ->
+        { u with
+            Tier = Some "premium"
+            PremiumUntil = Some until
+            StarsChargeId = chargeId |> (fun c -> if c = "" then u.StarsChargeId else Some c) })
+
+/// Drop a user back to free (a lapse, or a refund). We keep StarsChargeId so
+/// support can still look up / refund the last charge if needed.
+let clearPremium (id: float) =
+    update id (fun u ->
+        { u with
+            Tier = None
+            PremiumUntil = None })
 
 /// Users who opted into the daily scheduled quote.
 let withDailyQuote () : UserProfile[] =

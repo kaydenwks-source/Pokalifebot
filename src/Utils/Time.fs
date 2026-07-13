@@ -49,6 +49,16 @@ let parseUtcOffset (raw: string) : float option =
             | _ -> None
         | _ -> None
 
+/// "2026-07-14" -> that calendar day at midnight, or None if malformed.
+let parseDay (raw: string) : System.DateTime option =
+    match raw.Trim().Split('-') with
+    | [| y; m; d |] ->
+        match System.Int32.TryParse y, System.Int32.TryParse m, System.Int32.TryParse d with
+        | (true, yy), (true, mm), (true, dd) when mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31 ->
+            Some(System.DateTime(yy, mm, dd))
+        | _ -> None
+    | _ -> None
+
 /// 480.0 -> "UTC+08:00"
 let formatOffset (minutes: float) : string =
     let sign = if minutes < 0.0 then "-" else "+"
