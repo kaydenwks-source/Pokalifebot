@@ -55,6 +55,7 @@ let completeByIndex (userId: float) (index: int) : TaskItem option =
                 DoneAt = Some(System.DateTime.Now.ToString("yyyy-MM-dd HH:mm")) }
 
         saveAll (getAll () |> Array.map (fun x -> if x.Id = t.Id then updated else x))
+        Gamification.award userId Gamification.Points.Task
         updated)
 
 let deleteByIndex (userId: float) (index: int) : TaskItem option =

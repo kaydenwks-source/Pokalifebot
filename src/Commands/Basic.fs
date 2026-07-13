@@ -89,6 +89,7 @@ let private helpText =
       "⚙️ Settings"
       "/settings — see everything · /settings timezone +8"
       "/settings morning 07:30 · /settings evening 21:00"
+      "/stats — your level, XP and badges"
       "/usage — how much of today's AI budget is left"
       "/export — download all your data · /deleteme — erase everything"
       ""
@@ -123,4 +124,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 22 (natural language)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 23 (gamification)" Env.Version)

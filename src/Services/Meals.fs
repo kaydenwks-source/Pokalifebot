@@ -27,6 +27,7 @@ let add (userId: float) (n: Nutrition) : Meal =
           Fiber = n.Fiber }
 
     saveAll (Array.append (getAll ()) [| meal |])
+    Gamification.award userId Gamification.Points.Meal
     meal
 
 let onDate (userId: float) (date: string) : Meal[] =

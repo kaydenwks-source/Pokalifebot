@@ -49,6 +49,10 @@ let logToday (userId: float) (bedTime: string) (wakeTime: string) : SleepLog * b
         all |> Array.filter (fun l -> not (l.UserId = userId && l.Date = entry.Date))
 
     saveAll (Array.append others [| entry |])
+    // Award once per night — re-logging to correct times shouldn't farm XP.
+    if not replaced then
+        Gamification.award userId Gamification.Points.Sleep
+
     entry, replaced
 
 type Stats =

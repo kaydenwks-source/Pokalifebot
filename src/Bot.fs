@@ -94,6 +94,10 @@ let create (config: Env.AppConfig) : Telegraf =
     // Phase 19 — AI usage / budget
     bot.command ("usage", Commands.Account.handleUsage config)
 
+    // Phase 23 — gamification
+    bot.command ("stats", Commands.Stats.handle)
+    bot.command ("level", Commands.Stats.handle)
+
     // Phase 20 — data safety: export and account deletion
     bot.command ("export", Commands.Account.handleExport)
     bot.command ("deleteme", Commands.Account.handleDeleteMe)

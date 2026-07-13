@@ -26,6 +26,7 @@
     <Compile Include="Models/Goal.fs" />
     <Compile Include="Services/Storage.fs" />
     <Compile Include="Services/Users.fs" />
+    <Compile Include="Services/Gamification.fs" />
     <Compile Include="Services/SleepLogs.fs" />
     <Compile Include="Services/Reminders.fs" />
     <Compile Include="Services/Habits.fs" />
@@ -71,6 +72,7 @@
     <Compile Include="Commands/Report.fs" />
     <Compile Include="Commands/Coach.fs" />
     <Compile Include="Commands/Account.fs" />
+    <Compile Include="Commands/Stats.fs" />
     <Compile Include="Commands/NaturalLanguage.fs" />
     <Compile Include="Commands/Settings.fs" />
     <Compile Include="Commands/Admin.fs" />

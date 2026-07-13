@@ -137,4 +137,5 @@ let markDone (habit: Habit) : DoneResult =
             { habit with Completions = Array.append habit.Completions [| today |] }
 
         saveAll (getAll () |> Array.map (fun h -> if h.Id = habit.Id then updated else h))
+        Gamification.award updated.UserId Gamification.Points.Habit
         Marked(updated, streaksFor updated.Cadence updated.Completions)

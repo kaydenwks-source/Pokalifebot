@@ -39,6 +39,7 @@ let add (userId: float) (p: ParsedWorkout) : WorkoutLog =
           CaloriesBurned = p.Calories }
 
     saveAll (Array.append (getAll ()) [| log |])
+    Gamification.award userId Gamification.Points.Workout
     log
 
 type Bests =
