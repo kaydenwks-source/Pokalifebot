@@ -129,4 +129,4 @@ let handlePing (ctx: Context) =
 
 let handleVersion (ctx: Context) =
     logCommand "version" ctx
-    ctx.reply (sprintf "Momentum AI v%s — Phase 21 (guided onboarding)" Env.Version)
+    ctx.reply (sprintf "Momentum AI v%s — Phase 21 (onboarding) + smart goal tracking" Env.Version)

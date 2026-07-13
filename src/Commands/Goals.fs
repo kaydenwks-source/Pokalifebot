@@ -12,11 +12,13 @@ open Config
 let private usage =
     [ "🎯 Goals"
       ""
-      "/goal add read 20 books — set a goal (AI works out the numbers)"
+      "/goal add read Atomic Habits — AI works out the scale (e.g. chapters)"
       "/goal add save $5000 · /goal add run 100 km · /goal add finish python course"
       "/goals — progress overview"
-      "/goal plan <number> — your coach's 5-step path"
-      "/goal log <number> <amount> — add progress (amount optional, default 1)"
+      "/goal plan <number> — your coach's step-by-step path"
+      "/goal log <number> <amount> — add progress (cumulative goals; default 1)"
+      "/goal log <number> <point> — for chapters/lessons, jump to where you are"
+      "     e.g. /goal log 1 3 → 3/12 chapters. /goal log 1 = next one."
       "/goal done <number> — finish a goal outright"
       "/goal delete <number> — remove one"
       ""
@@ -72,8 +74,8 @@ let private addGoal (config: Env.AppConfig) (user: UserProfile) (description: st
                     return! ctx.reply "🤔 I couldn't read that as a goal. Try: /goal add read 20 books"
             | Ok p ->
                 Entitlements.commit config.AdminUserId user "goal"
-                let goal = Goals.add user.Id p.Name p.Target p.Unit
-                Logger.info (sprintf "%s added goal: %s (%g %s)" user.FirstName goal.Name goal.TargetValue goal.Unit)
+                let goal = Goals.add user.Id p.Name p.Target p.Unit p.Absolute
+                Logger.info (sprintf "%s added goal: %s (%g %s, absolute=%b)" user.FirstName goal.Name goal.TargetValue goal.Unit p.Absolute)
 
                 // Coach breakdown: big goal -> 5 achievable steps (non-fatal on failure).
                 let! stepsResult = Ai.GoalParser.breakdown config goal.Name goal.TargetValue goal.Unit
@@ -96,17 +98,29 @@ let private addGoal (config: Env.AppConfig) (user: UserProfile) (description: st
                     |> Array.findIndex (fun g -> g.Id = goal.Id)
                     |> (+) 1
 
+                // Ordered goals are logged by position reached; cumulative by amount added.
+                let logHint =
+                    if Goals.isAbsolute goal then
+                        sprintf
+                            "Log the %s you reach: /goal log %d 3 → 3/%g%s (jumps straight there) · path: /goal plan %d"
+                            (if goal.Unit = "" then "point" else goal.Unit.TrimEnd('s'))
+                            index
+                            goal.TargetValue
+                            unitStr
+                            index
+                    else
+                        sprintf "Log progress with /goal log %d <amount> · path anytime: /goal plan %d" index index
+
                 return!
                     ctx.reply (
                         sprintf
-                            "🎯 Goal set: %s (%g%s)\n%s 0%%%s\n\nLog progress with /goal log %d <amount> · path anytime: /goal plan %d"
+                            "🎯 Goal set: %s (%g%s)\n%s 0%%%s\n\n%s"
                             goal.Name
                             goal.TargetValue
                             unitStr
                             (bar 0)
                             stepsBlock
-                            index
-                            index
+                            logHint
                     )
     }
 
@@ -149,29 +163,44 @@ let private logProgress
             else
                 None
 
-        let amount =
-            if args.Length >= 2 then
-                match System.Double.TryParse args.[1] with
+        // Pull the first number from whatever follows the goal number, so
+        // "chapter 3" or "3km" both give 3. None = no explicit value.
+        let explicit =
+            args
+            |> Array.skip (min 1 args.Length)
+            |> Array.tryPick (fun tok ->
+                match System.Double.TryParse(System.String(tok |> Seq.filter (fun c -> System.Char.IsDigit c || c = '.' || c = '-') |> Seq.toArray)) with
                 | true, v -> Some v
-                | _ -> None
-            else
-                Some 1.0
+                | _ -> None)
 
-        match index, amount with
-        | Some n, Some amt ->
+        match index with
+        | None -> return! ctx.reply "Usage: /goal log <number> <amount> — e.g. /goal log 1 2"
+        | Some n ->
             match Goals.byIndex user.Id n with
             | None -> return! ctx.reply "That number isn't in your list — check /goals"
             | Some goal when goal.CompletedAt.IsSome ->
                 return! ctx.reply (sprintf "\"%s\" is already complete ✅ — set a new one with /goal add" goal.Name)
             | Some goal ->
-                let result = Goals.logProgress goal amt
+                // Ordered goal: an explicit value jumps to that position, no
+                // value means "did the next one" (+1). Cumulative: add (default 1).
+                let result =
+                    match explicit with
+                    | Some v -> Goals.applyLog goal v
+                    | None ->
+                        if Goals.isAbsolute goal then
+                            Goals.setProgress goal (goal.Progress + 1.0)
+                        else
+                            Goals.logProgress goal 1.0
+
                 let g = result.Goal
                 let pct = Goals.percentOf g
                 let unitStr = if g.Unit = "" then "" else " " + g.Unit
-                Logger.info (sprintf "%s logged %+g to goal %s (%d%%)" user.FirstName amt g.Name pct)
+                Logger.info (sprintf "%s logged goal %s → %g/%g (%d%%)" user.FirstName g.Name g.Progress g.TargetValue pct)
+
+                let header = if Goals.isAbsolute g then sprintf "📖 %s" g.Name else sprintf "🎯 %s" g.Name
 
                 let lines =
-                    [ Some(sprintf "🎯 %s" g.Name)
+                    [ Some header
                       Some(sprintf "%s %g/%g%s (%d%%)" (bar pct) g.Progress g.TargetValue unitStr pct)
                       milestoneText result.Milestone ]
                     |> List.choose id
@@ -188,7 +217,6 @@ let private logProgress
                     | Error _ -> return box ()
                 else
                     return box ()
-        | _ -> return! ctx.reply "Usage: /goal log <number> <amount> — e.g. /goal log 1 2"
     }
 
 let private markDone (config: Env.AppConfig) (user: UserProfile) (arg: string) (ctx: Context) : JS.Promise<obj> =
@@ -196,8 +224,15 @@ let private markDone (config: Env.AppConfig) (user: UserProfile) (arg: string) (
     | true, n ->
         match Goals.byIndex user.Id n with
         | Some goal when goal.CompletedAt.IsNone ->
-            // Log exactly the remaining amount so it lands on 100%.
-            logProgress config user [| string n; string (goal.TargetValue - goal.Progress) |] ctx
+            // Land on 100%: ordered goals jump to the target position,
+            // cumulative goals add exactly the remaining amount.
+            let value =
+                if Goals.isAbsolute goal then
+                    goal.TargetValue
+                else
+                    goal.TargetValue - goal.Progress
+
+            logProgress config user [| string n; string value |] ctx
         | Some goal -> ctx.reply (sprintf "\"%s\" is already complete ✅" goal.Name)
         | None -> ctx.reply "That number isn't in your list — check /goals"
     | _ -> ctx.reply "Usage: /goal done <number>"

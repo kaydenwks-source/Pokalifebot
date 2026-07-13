@@ -25,7 +25,7 @@ let percentOf (g: Goal) : int =
         |> max 0
         |> min 100
 
-let add (userId: float) (name: string) (target: float) (unit: string) : Goal =
+let add (userId: float) (name: string) (target: float) (unit: string) (absolute: bool) : Goal =
     let goal =
         { Id = System.Guid.NewGuid().ToString().Substring(0, 8)
           UserId = userId
@@ -35,10 +35,14 @@ let add (userId: float) (name: string) (target: float) (unit: string) : Goal =
           Progress = 0.0
           CreatedAt = System.DateTime.Now.ToString("yyyy-MM-dd")
           CompletedAt = None
-          Steps = None }
+          Steps = None
+          Absolute = (if absolute then Some true else None) }
 
     saveAll (Array.append (getAll ()) [| goal |])
     goal
+
+/// Ordered/position goals (chapters, lessons) log by position reached.
+let isAbsolute (g: Goal) : bool = g.Absolute = Some true
 
 let setSteps (goal: Goal) (steps: string[]) : Goal =
     let updated = { goal with Steps = Some steps }
@@ -67,11 +71,9 @@ let crossedMilestone (beforePct: int) (afterPct: int) : int option =
 
 type LogResult = { Goal: Goal; Milestone: int option }
 
-/// Add progress (can be negative to correct mistakes; floors at 0).
-/// Marks the goal complete when the target is reached.
-let logProgress (goal: Goal) (amount: float) : LogResult =
+/// Persist a new progress value and detect completion + milestone crossing.
+let private commit (goal: Goal) (newProgress: float) : LogResult =
     let beforePct = percentOf goal
-    let newProgress = max 0.0 (goal.Progress + amount)
     let nowComplete = newProgress >= goal.TargetValue
 
     let updated =
@@ -89,6 +91,21 @@ let logProgress (goal: Goal) (amount: float) : LogResult =
 
     { Goal = updated
       Milestone = crossedMilestone beforePct (percentOf updated) }
+
+/// Add progress (can be negative to correct mistakes; floors at 0).
+/// Marks the goal complete when the target is reached.
+let logProgress (goal: Goal) (amount: float) : LogResult =
+    commit goal (max 0.0 (goal.Progress + amount))
+
+/// Set progress to an absolute position (chapter/lesson reached), clamped
+/// to 0..target. Used for ordered goals: "chapter 3" -> 3/12.
+let setProgress (goal: Goal) (position: float) : LogResult =
+    commit goal (position |> max 0.0 |> min goal.TargetValue)
+
+/// Apply a logged value the way the goal expects: ordered goals jump to the
+/// position, cumulative goals add it up.
+let applyLog (goal: Goal) (value: float) : LogResult =
+    if isAbsolute goal then setProgress goal value else logProgress goal value
 
 /// Feed progress into every ACTIVE goal measured in this unit —
 /// e.g. a 5 km run advances every "km" goal automatically.

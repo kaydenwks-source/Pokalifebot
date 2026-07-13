@@ -102,6 +102,11 @@ let jsonNumber (json: obj) (key: string) : float option =
     else
         None
 
+/// Read a boolean field from parsed JSON; missing or non-bool -> false.
+let jsonBool (json: obj) (key: string) : bool =
+    let v: obj = json?(key)
+    jsTypeof v = "boolean" && unbox<bool> v
+
 /// Read a non-empty string field from parsed JSON.
 let jsonString (json: obj) (key: string) : string option =
     let v: obj = json?(key)
