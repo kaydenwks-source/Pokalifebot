@@ -18,7 +18,7 @@ import { iterate } from "./fable_modules/fable-library-js.5.7.0/List.js";
 
 function start(config) {
     return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => {
-        info(toText(printf("Momentum AI v%s starting in %s mode"))("0.29.2")(config.Environment));
+        info(toText(printf("Momentum AI v%s starting in %s mode"))("0.29.3")(config.Environment));
         start_1();
         startKeepAlive();
         return restore().then(() => {

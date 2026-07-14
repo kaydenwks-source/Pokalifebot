@@ -79,9 +79,9 @@ doesn't need the .NET build tools — it just installs and runs.
 
 Render free services sleep after 15 minutes with no **inbound** traffic (the
 bot's outbound Telegram polling doesn't count). The bot now keeps **itself**
-awake: on Render it pings its own public URL every 10 minutes, using the
+awake: on Render it pings its own public URL every 5 minutes, using the
 `RENDER_EXTERNAL_URL` that Render sets automatically. You'll see
-`Keep-alive: self-ping every 10 min enabled.` in the logs. No external service
+`Keep-alive: self-ping every 5 min enabled.` in the logs. No external service
 required.
 
 Optional extra safety net: also set up a free pinger (https://cron-job.org, no

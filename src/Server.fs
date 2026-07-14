@@ -44,12 +44,15 @@ let start () =
 
 /// Keep the free host awake: Render spins a free service down after ~15 min
 /// with no INBOUND traffic (the bot's outbound Telegram polling doesn't count).
-/// So we hit our own public URL every 10 min, which resets that idle timer.
-/// Render provides the public URL as RENDER_EXTERNAL_URL; no external pinger
-/// needed. No-op locally where that variable is unset.
+/// So we hit our own public URL every 5 min, which resets that idle timer —
+/// short enough that even a missed ping still lands well before the 15-min
+/// limit. Render provides the public URL as RENDER_EXTERNAL_URL; no external
+/// pinger needed. No-op locally where that variable is unset.
 let startKeepAlive () =
     match Node.tryGetEnv "RENDER_EXTERNAL_URL" with
     | None -> ()
     | Some url ->
-        Node.setInterval 600000 (fun () -> ping url) |> ignore
-        Utils.Logger.info "Keep-alive: self-ping every 10 min enabled."
+        // Ping once right away, then every 5 minutes.
+        ping url
+        Node.setInterval 300000 (fun () -> ping url) |> ignore
+        Utils.Logger.info "Keep-alive: self-ping every 5 min enabled."
