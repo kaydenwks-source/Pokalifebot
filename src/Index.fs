@@ -15,6 +15,9 @@ let private start (config: Env.AppConfig) =
         // port opens quickly).
         Server.start ()
 
+        // Keep the free host from sleeping by pinging our own URL periodically.
+        Server.startKeepAlive ()
+
         // Restore the database from Neon BEFORE anything opens SQLite, so an
         // ephemeral-disk host (Render) comes back with the previous data.
         do! Services.Cloud.restore ()

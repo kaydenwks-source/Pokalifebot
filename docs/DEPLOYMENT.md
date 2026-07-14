@@ -75,14 +75,18 @@ doesn't need the .NET build tools — it just installs and runs.
 
 ---
 
-## Part 4 — Keep it awake (free, no card)
+## Part 4 — Keep it awake (automatic, nothing to do)
 
-Render free services sleep after 15 minutes idle. A free pinger keeps it up:
+Render free services sleep after 15 minutes with no **inbound** traffic (the
+bot's outbound Telegram polling doesn't count). The bot now keeps **itself**
+awake: on Render it pings its own public URL every 10 minutes, using the
+`RENDER_EXTERNAL_URL` that Render sets automatically. You'll see
+`Keep-alive: self-ping every 10 min enabled.` in the logs. No external service
+required.
 
-1. Go to https://cron-job.org and sign up (no card).
-2. Create a cronjob that requests your Render URL **every 10 minutes**.
-
-That's it — the bot now stays awake around the clock.
+Optional extra safety net: also set up a free pinger (https://cron-job.org, no
+card) hitting your Render URL every ~10 minutes, in case the process ever
+restarts in a way that misses a self-ping.
 
 ---
 
@@ -120,9 +124,11 @@ Render will restore it:
 
 Because `dist/` is committed, each update is:
 ```bash
-npm run build          # recompile F# → dist/
-git add -A && git commit -m "…"
-git push               # Render auto-deploys
+npm run build              # recompile F# → dist/
+git add -A && git add -f dist   # -f dist also catches Fable's runtime library,
+                                 # which Fable marks git-ignored inside dist/fable_modules
+git commit -m "…"
+git push                   # Render auto-deploys
 ```
 Render redeploys on push; the bot snapshots to Neon on shutdown and restores on
 the new instance, so no data is lost across deploys.

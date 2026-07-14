@@ -2,7 +2,7 @@
 import { PromiseBuilder__Delay_62FBFDE1, PromiseBuilder__Run_212F1D4B } from "./fable_modules/Fable.Promise.3.2.0/Promise.fs.js";
 import { error, info } from "./Utils/Logger.js";
 import { printf, toText } from "./fable_modules/fable-library-js.5.7.0/String.js";
-import { start as start_1 } from "./Server.js";
+import { startKeepAlive, start as start_1 } from "./Server.js";
 import { promise } from "./fable_modules/Fable.Promise.3.2.0/PromiseImpl.fs.js";
 import { snapshot, enabled, restore } from "./Services/Cloud.js";
 import { create } from "./Bot.js";
@@ -18,8 +18,9 @@ import { iterate } from "./fable_modules/fable-library-js.5.7.0/List.js";
 
 function start(config) {
     return PromiseBuilder__Run_212F1D4B(promise, PromiseBuilder__Delay_62FBFDE1(promise, () => {
-        info(toText(printf("Momentum AI v%s starting in %s mode"))("0.29.1")(config.Environment));
+        info(toText(printf("Momentum AI v%s starting in %s mode"))("0.29.2")(config.Environment));
         start_1();
+        startKeepAlive();
         return restore().then(() => {
             const bot = create(config);
             start_2(config, bot);

@@ -14,7 +14,25 @@ export function start() {
             res.end("Momentum AI is running.");
         });
         server.listen(parse(p, 511, false, 32), '0.0.0.0');
-        info(toText(printf("Health server listening on port %s (keeps the free host awake)."))(p));
+        info(toText(printf("Health server listening on port %s."))(p));
+    }
+}
+
+/**
+ * Keep the free host awake: Render spins a free service down after ~15 min
+ * with no INBOUND traffic (the bot's outbound Telegram polling doesn't count).
+ * So we hit our own public URL every 10 min, which resets that idle timer.
+ * Render provides the public URL as RENDER_EXTERNAL_URL; no external pinger
+ * needed. No-op locally where that variable is unset.
+ */
+export function startKeepAlive() {
+    const matchValue = tryGetEnv("RENDER_EXTERNAL_URL");
+    if (matchValue != null) {
+        const url = matchValue;
+        setInterval((() => {
+            fetch(url).catch(() => {});
+        }), 600000);
+        info("Keep-alive: self-ping every 10 min enabled.");
     }
 }
 

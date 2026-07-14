@@ -52,6 +52,6 @@ export function handlePing(ctx) {
 
 export function handleVersion(ctx) {
     logCommand("version", ctx);
-    return ctx.reply(toText(printf("Momentum AI v%s — Phase 18 (cloud deployment)"))("0.29.1"));
+    return ctx.reply(toText(printf("Momentum AI v%s — Phase 18 (cloud deployment)"))("0.29.2"));
 }
 
