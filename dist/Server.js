@@ -13,7 +13,7 @@ export function start() {
             res.writeHead(200, { 'Content-Type': 'text/plain' });
             res.end("Momentum AI is running.");
         });
-        server.listen(parse(p, 511, false, 32));
+        server.listen(parse(p, 511, false, 32), '0.0.0.0');
         info(toText(printf("Health server listening on port %s (keeps the free host awake)."))(p));
     }
 }

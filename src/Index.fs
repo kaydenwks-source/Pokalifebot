@@ -10,12 +10,14 @@ let private start (config: Env.AppConfig) =
     promise {
         Logger.info (sprintf "Momentum AI v%s starting in %s mode" Env.Version config.Environment)
 
+        // Bind the HTTP port FIRST, so the host detects an open port immediately
+        // no matter how long the Neon restore takes (Render fails a deploy if no
+        // port opens quickly).
+        Server.start ()
+
         // Restore the database from Neon BEFORE anything opens SQLite, so an
         // ephemeral-disk host (Render) comes back with the previous data.
         do! Services.Cloud.restore ()
-
-        // Open the HTTP port the free host requires + the keep-alive pinger hits.
-        Server.start ()
 
         let bot = Bot.create config
         Scheduler.DailyQuotes.start config bot

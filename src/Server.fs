@@ -20,7 +20,8 @@ let private writeHead (res: obj) : unit = jsNative
 [<Emit("$0.end($1)")>]
 let private endWith (res: obj) (body: string) : unit = jsNative
 
-[<Emit("$0.listen($1)")>]
+// Bind 0.0.0.0 explicitly — Render probes that interface for its port scan.
+[<Emit("$0.listen($1, '0.0.0.0')")>]
 let private listen (server: obj) (port: int) : unit = jsNative
 
 let start () =

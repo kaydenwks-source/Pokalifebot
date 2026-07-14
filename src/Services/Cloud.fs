@@ -26,7 +26,11 @@ let private tempFile = "database/_snapshot.db"
 // queries. Each statement is a small Emit that calls it as `sql`...``; params
 // go through ${..} so neon binds them safely.
 [<Import("neon", "@neondatabase/serverless")>]
-let private neon (connectionString: string) : obj = jsNative
+let private neon (connectionString: string) (options: obj) : obj = jsNative
+
+// Abort a hung Neon request after 20s so it can never block boot or a tick.
+[<Emit("{ fetchOptions: { signal: AbortSignal.timeout($0) } }")>]
+let private timeoutOpts (ms: int) : obj = jsNative
 
 [<Emit("$0`CREATE TABLE IF NOT EXISTS db_snapshot (id INT PRIMARY KEY, data TEXT NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`")>]
 let private sqlEnsureTable (sql: obj) : JS.Promise<obj[]> = jsNative
@@ -46,9 +50,9 @@ let private connectionString () = Node.tryGetEnv "DATABASE_URL"
 /// True when a Neon connection string is configured (i.e. in production).
 let enabled () = (connectionString ()).IsSome
 
-let private sql = lazy (neon (Option.get (connectionString ())))
-
-let private ensureTable () = sqlEnsureTable sql.Value
+/// A fresh HTTP client per operation, each with its own 20s abort timeout. (A
+/// single shared AbortSignal would fire once and then kill every later query.)
+let private client () = neon (Option.get (connectionString ())) (timeoutOpts 20000)
 
 /// Pull the latest snapshot from Neon onto the local disk. Safe to call always:
 /// no DATABASE_URL → skip; no snapshot yet → start fresh; any error → log and
@@ -59,8 +63,9 @@ let restore () : JS.Promise<unit> =
         | None -> Logger.info "Cloud: no DATABASE_URL set — using the local SQLite file only."
         | Some _ ->
             try
-                let! _ = ensureTable ()
-                let! rows = sqlSelectSnapshot sql.Value
+                let sql = client ()
+                let! _ = sqlEnsureTable sql
+                let! rows = sqlSelectSnapshot sql
 
                 if rows.Length = 0 then
                     Logger.info "Cloud: no snapshot in Neon yet — starting with a fresh database."
@@ -90,8 +95,9 @@ let snapshot () : JS.Promise<unit> =
                 let b64 = Node.fs.readFileSync (tempFile, "base64")
                 Node.fs.unlinkSync tempFile
 
-                let! _ = ensureTable ()
-                let! _ = sqlUpsertSnapshot sql.Value b64
+                let sql = client ()
+                let! _ = sqlEnsureTable sql
+                let! _ = sqlUpsertSnapshot sql b64
                 Logger.info "Cloud: snapshot saved to Neon."
             with ex ->
                 Logger.error (sprintf "Cloud: snapshot failed (will retry next tick): %s" ex.Message)
