@@ -98,6 +98,8 @@
     <Compile Include="Scheduler/WeeklyReports.fs" />
     <Compile Include="Scheduler/MonthlyReports.fs" />
     <Compile Include="Scheduler/Backups.fs" />
+    <Compile Include="Services/Cloud.fs" />
+    <Compile Include="Server.fs" />
     <Compile Include="Bot.fs" />
     <Compile Include="Index.fs" />
   </ItemGroup>

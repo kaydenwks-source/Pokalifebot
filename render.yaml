@@ -1,0 +1,33 @@
+# Render Blueprint — deploy with "New → Blueprint" and point it at this repo.
+# The free web service runs the bot 24/7 (kept awake by a free uptime pinger);
+# durable data lives in Neon (see src/Services/Cloud.fs). dist/ is committed so
+# no .NET/Fable build is needed on the host.
+services:
+  - type: web
+    name: momentum-ai
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node --disable-warning=ExperimentalWarning dist/Index.js
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      # Not secret — the Groq vision endpoint used for photo food logging.
+      - key: VISION_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: VISION_MODEL
+        value: meta-llama/llama-4-scout-17b-16e-instruct
+      # Secrets — set these in the Render dashboard (never commit them):
+      - key: BOT_TOKEN
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: VISION_API_KEY
+        sync: false
+      - key: DATABASE_URL # Neon connection string
+        sync: false
+      - key: ADMIN_USER_ID
+        sync: false

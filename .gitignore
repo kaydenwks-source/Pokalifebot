@@ -1,8 +1,9 @@
 # Secrets — never commit these
 .env
 
-# Build output
-dist/
+# Build output. NOTE: dist/ is intentionally COMMITTED so the host (Render)
+# can run the compiled JS without needing the .NET/Fable build toolchain.
+# Rebuild with `npm run build` and commit dist/ before deploying.
 bin/
 obj/
 .fable/

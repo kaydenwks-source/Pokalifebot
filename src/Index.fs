@@ -10,6 +10,13 @@ let private start (config: Env.AppConfig) =
     promise {
         Logger.info (sprintf "Momentum AI v%s starting in %s mode" Env.Version config.Environment)
 
+        // Restore the database from Neon BEFORE anything opens SQLite, so an
+        // ephemeral-disk host (Render) comes back with the previous data.
+        do! Services.Cloud.restore ()
+
+        // Open the HTTP port the free host requires + the keep-alive pinger hits.
+        Server.start ()
+
         let bot = Bot.create config
         Scheduler.DailyQuotes.start config bot
         Scheduler.Reminders.start bot
@@ -18,14 +25,26 @@ let private start (config: Env.AppConfig) =
         Scheduler.MonthlyReports.start config bot
         Scheduler.Backups.start ()
 
-        // Graceful shutdown on Ctrl+C or a kill signal.
-        Node.nodeProcess.once ("SIGINT", fun _ ->
-            Logger.info "Received SIGINT — shutting down."
-            bot.stop "SIGINT")
+        // In production, save a snapshot to Neon every 2 minutes so a crash
+        // loses at most a couple of minutes. No-op locally.
+        if Services.Cloud.enabled () then
+            Node.setInterval 120000 (fun () -> Services.Cloud.snapshot () |> ignore)
+            |> ignore
 
-        Node.nodeProcess.once ("SIGTERM", fun _ ->
-            Logger.info "Received SIGTERM — shutting down."
-            bot.stop "SIGTERM")
+        // Graceful shutdown: snapshot to Neon first, then stop and exit. This
+        // is the main durability guarantee — Render sends SIGTERM before every
+        // restart, deploy and idle spin-down.
+        let shutdown (reason: string) =
+            promise {
+                Logger.info (sprintf "Received %s — saving a final snapshot then shutting down." reason)
+                do! Services.Cloud.snapshot ()
+                bot.stop reason
+                Node.nodeProcess.exit 0
+            }
+            |> ignore
+
+        Node.nodeProcess.once ("SIGINT", fun _ -> shutdown "SIGINT")
+        Node.nodeProcess.once ("SIGTERM", fun _ -> shutdown "SIGTERM")
 
         // Fail fast with a clear message if the Telegram token is bad.
         let! me = bot.telegram.getMe ()

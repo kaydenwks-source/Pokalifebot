@@ -41,6 +41,10 @@ let setTimeout (ms: int) (callback: unit -> unit) : obj = jsNative
 [<Emit("clearTimeout($0)")>]
 let clearTimeout (handle: obj) : unit = jsNative
 
+/// Repeating timer, e.g. the periodic cloud snapshot. (ms, cb) like setTimeout.
+[<Emit("setInterval($1, $0)")>]
+let setInterval (ms: int) (callback: unit -> unit) : obj = jsNative
+
 [<Emit("process.env[$0]")>]
 let private envRaw (name: string) : string = jsNative
 
